@@ -717,7 +717,7 @@ function ResultsPanel({ query }: { query: string }) {
           </h2>
         </div>
         <div className="font-mono text-[11px] text-muted-foreground">
-          model: <span className="text-foreground">video-clip-v2</span> · top-k 3
+          model: <span className="text-foreground">segclip-v2</span> · 512d · top-k 3
         </div>
       </div>
       <div className="space-y-3">
