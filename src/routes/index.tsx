@@ -27,6 +27,10 @@ import {
   Plane,
   Car,
   Cpu as CpuIcon,
+  Gauge,
+  Timer,
+  AlertTriangle,
+  TrendingUp,
 } from "lucide-react";
 
 import thumbGrasp from "@/assets/thumb-grasp.jpg";
@@ -207,7 +211,8 @@ const MATCHES: Match[] = [
 ];
 
 const NAV = [
-  { label: "Pipeline", icon: Activity, view: "pipeline" as const },
+  { label: "Observability", icon: Gauge,    view: "observability" as const },
+  { label: "Pipeline",      icon: Activity, view: "pipeline" as const },
   { label: "Library", icon: Video, view: "library" as const, count: 1247 },
   { label: "Ingest", icon: Upload, view: "library" as const },
   { label: "Search", icon: Search, view: "library" as const },
@@ -218,7 +223,7 @@ const NAV = [
   { label: "Settings", icon: Settings, view: "library" as const },
 ];
 
-type View = "pipeline" | "library";
+type View = "observability" | "pipeline" | "library";
 
 type Source = {
   id: string;
@@ -260,7 +265,7 @@ function Index() {
   const [query, setQuery] = useState("");
   const [listening, setListening] = useState(false);
   const [selected, setSelected] = useState<string | null>("clip_01H8Z9");
-  const [view, setView] = useState<View>("pipeline");
+  const [view, setView] = useState<View>("observability");
   const inputRef = useRef<HTMLInputElement>(null);
 
   const activeClip = useMemo(
@@ -278,7 +283,9 @@ function Index() {
           <TopBar view={view} />
           <div className="mx-auto max-w-[1400px] px-8 py-8 space-y-8">
             <Header view={view} />
-            {view === "pipeline" ? (
+            {view === "observability" ? (
+              <ObservabilityView onJumpToSearch={() => setView("library")} />
+            ) : view === "pipeline" ? (
               <PipelineView onJumpToSearch={() => setView("library")} />
             ) : (
               <>
@@ -407,7 +414,9 @@ function TopBar({ view }: { view: View }) {
         <ChevronRight className="h-3 w-3" />
         <span>workspace</span>
         <ChevronRight className="h-3 w-3" />
-        <span className="text-primary">{view === "pipeline" ? "pipeline" : "library"}</span>
+        <span className="text-primary">
+          {view === "pipeline" ? "pipeline" : view === "observability" ? "observability" : "library"}
+        </span>
       </div>
       <div className="flex items-center gap-2">
         <StatusPill icon={Radio} label="ingest" value="live" />
@@ -441,6 +450,23 @@ function StatusPill({
 }
 
 function Header({ view }: { view: View }) {
+  if (view === "observability") {
+    return (
+      <div className="space-y-3">
+        <div className="flex items-center gap-2 font-mono text-[11px] text-primary">
+          <CircleDot className="h-3 w-3" />
+          <span className="uppercase tracking-[0.2em]">observability · live</span>
+        </div>
+        <h1 className="text-4xl md:text-5xl font-semibold tracking-tight leading-[1.05]">
+          The video DB, <span className="text-primary text-glow">under the hood</span>.
+        </h1>
+        <p className="text-muted-foreground max-w-2xl text-[15px] leading-relaxed">
+          Query latency, embedding throughput, index size and error rate across the SegCLIP
+          semantic layer. Everything you need to run this as production infra for your AI stack.
+        </p>
+      </div>
+    );
+  }
   if (view === "pipeline") {
     return (
       <div className="space-y-3">
@@ -485,6 +511,161 @@ function Header({ view }: { view: View }) {
 }
 
 /* ------------------------------ Pipeline ------------------------------ */
+
+function Sparkline({ points, color = "hsl(var(--primary))" }: { points: number[]; color?: string }) {
+  const w = 100;
+  const h = 28;
+  const max = Math.max(...points);
+  const min = Math.min(...points);
+  const range = Math.max(1, max - min);
+  const step = w / Math.max(1, points.length - 1);
+  const path = points
+    .map((p, i) => `${i === 0 ? "M" : "L"}${(i * step).toFixed(2)},${(h - ((p - min) / range) * h).toFixed(2)}`)
+    .join(" ");
+  const area = `${path} L${w},${h} L0,${h} Z`;
+  return (
+    <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-8" preserveAspectRatio="none">
+      <path d={area} fill={color} opacity={0.15} />
+      <path d={path} fill="none" stroke={color} strokeWidth={1.2} vectorEffect="non-scaling-stroke" />
+    </svg>
+  );
+}
+
+const QPS_SERIES    = [42, 48, 51, 47, 55, 62, 58, 66, 72, 69, 78, 84, 81, 88, 92, 87, 94, 101, 96, 108, 112, 107, 118, 124];
+const P95_SERIES    = [92, 88, 95, 101, 97, 94, 102, 108, 99, 96, 91, 88, 94, 97, 102, 108, 104, 99, 96, 92, 89, 94, 97, 93];
+const EMBED_SERIES  = [1240, 1310, 1280, 1420, 1580, 1490, 1620, 1710, 1680, 1790, 1850, 1820, 1930, 2010, 1980, 2100, 2180, 2140, 2260, 2320, 2280, 2410, 2470, 2510];
+const ERROR_SERIES  = [0.12, 0.09, 0.14, 0.11, 0.08, 0.10, 0.07, 0.09, 0.06, 0.08, 0.05, 0.07, 0.06, 0.09, 0.11, 0.08, 0.06, 0.05, 0.07, 0.06, 0.04, 0.05, 0.06, 0.05];
+
+function ObservabilityView({ onJumpToSearch }: { onJumpToSearch: () => void }) {
+  const metrics = [
+    { label: "queries / sec",   value: "124",    delta: "+18% · 1h",       series: QPS_SERIES,   sub: "peak 141 · p50 6ms",   icon: TrendingUp,   good: true },
+    { label: "search p95",      value: "93ms",   delta: "−4ms · 1h",       series: P95_SERIES,   sub: "top-k 5 · segclip-v2", icon: Timer,        good: true },
+    { label: "embeds / min",    value: "2.5k",   delta: "+12% · 1h",       series: EMBED_SERIES, sub: "gpu q · 3 nodes",      icon: CpuIcon,      good: true },
+    { label: "error rate",      value: "0.05%",  delta: "SLO 0.5%",        series: ERROR_SERIES, sub: "5xx · last 1h",        icon: AlertTriangle,good: true },
+  ];
+
+  const endpoints = [
+    { path: "POST /v1/search",         qps: 84, p50: "6ms",  p95: "93ms",  p99: "142ms", err: "0.03%" },
+    { path: "POST /v1/videos",         qps: 12, p50: "42ms", p95: "310ms", p99: "820ms", err: "0.11%" },
+    { path: "POST /v1/videos/embed",   qps: 21, p50: "88ms", p95: "410ms", p99: "1.2s",  err: "0.08%" },
+    { path: "GET  /v1/clips/:id",      qps: 6,  p50: "3ms",  p95: "18ms",  p99: "41ms",  err: "0.00%" },
+    { path: "POST /v1/webhooks/deliver", qps: 1, p50: "112ms",p95: "620ms", p99: "2.1s",  err: "0.42%" },
+  ];
+
+  const storage = [
+    { label: "index size",       value: "312 GB",  hint: "8.4B vectors · segclip-v2 · 512d" },
+    { label: "compressed video", value: "190 GB",  hint: "3.4 TB raw · 18× · h265" },
+    { label: "shards",           value: "12 / 12", hint: "us-west-2 · replicated 3×" },
+    { label: "recall @ 10",      value: "0.94",    hint: "internal eval · 4.2k queries" },
+  ];
+
+  return (
+    <div className="space-y-8">
+      {/* metric tiles with sparklines */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+        {metrics.map((m) => (
+          <div key={m.label} className="panel rounded-lg p-4">
+            <div className="flex items-center justify-between">
+              <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                {m.label}
+              </span>
+              <m.icon className="h-3.5 w-3.5 text-primary" />
+            </div>
+            <div className="mt-2 flex items-baseline gap-2">
+              <span className="font-mono text-2xl font-semibold tracking-tight">{m.value}</span>
+              <span className="font-mono text-[10px] text-primary">{m.delta}</span>
+            </div>
+            <div className="mt-2"><Sparkline points={m.series} /></div>
+            <div className="mt-1 font-mono text-[10px] text-muted-foreground">{m.sub}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-12 gap-6">
+        {/* endpoint latency table */}
+        <section className="col-span-12 xl:col-span-8 space-y-4">
+          <SectionHeader eyebrow="latency" title="Endpoints" hint="rolling 5m · all regions" />
+          <div className="panel rounded-lg overflow-hidden">
+            <div className="grid grid-cols-12 gap-2 px-4 py-2.5 font-mono text-[10px] uppercase tracking-widest text-muted-foreground border-b border-border">
+              <div className="col-span-5">endpoint</div>
+              <div className="col-span-1 text-right">qps</div>
+              <div className="col-span-2 text-right">p50</div>
+              <div className="col-span-2 text-right">p95</div>
+              <div className="col-span-1 text-right">p99</div>
+              <div className="col-span-1 text-right">err</div>
+            </div>
+            {endpoints.map((e) => (
+              <div
+                key={e.path}
+                className="grid grid-cols-12 gap-2 px-4 py-3 items-center border-b border-border/60 last:border-b-0 hover:bg-secondary/30 transition-colors"
+              >
+                <div className="col-span-5 font-mono text-sm text-foreground truncate">{e.path}</div>
+                <div className="col-span-1 text-right font-mono text-[11px] text-foreground">{e.qps}</div>
+                <div className="col-span-2 text-right font-mono text-[11px] text-muted-foreground">{e.p50}</div>
+                <div className="col-span-2 text-right font-mono text-[11px] text-primary">{e.p95}</div>
+                <div className="col-span-1 text-right font-mono text-[11px] text-muted-foreground">{e.p99}</div>
+                <div className="col-span-1 text-right font-mono text-[11px] text-muted-foreground">{e.err}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="panel rounded-lg p-5 flex items-center justify-between">
+            <div>
+              <div className="font-mono text-[10px] uppercase tracking-widest text-primary">try a live query</div>
+              <div className="mt-1 text-sm">Feel the p95 — natural-language search over the index in one round-trip.</div>
+            </div>
+            <button
+              onClick={onJumpToSearch}
+              className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90"
+            >
+              <Search className="h-3.5 w-3.5" />
+              Open search
+            </button>
+          </div>
+        </section>
+
+        {/* storage + index panel */}
+        <aside className="col-span-12 xl:col-span-4 space-y-4">
+          <SectionHeader eyebrow="index" title="Storage & recall" hint="segclip-v2 · 512d" />
+          <div className="panel rounded-lg divide-y divide-border/60">
+            {storage.map((s) => (
+              <div key={s.label} className="p-4 flex items-start justify-between gap-4">
+                <div className="min-w-0">
+                  <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                    {s.label}
+                  </div>
+                  <div className="mt-1 font-mono text-[11px] text-muted-foreground">{s.hint}</div>
+                </div>
+                <div className="font-mono text-lg text-foreground shrink-0">{s.value}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="panel rounded-lg p-4">
+            <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+              cluster
+            </div>
+            <div className="mt-2 grid grid-cols-3 gap-2 font-mono text-[11px]">
+              <div>
+                <div className="text-primary text-lg">3</div>
+                <div className="text-muted-foreground">nodes</div>
+              </div>
+              <div>
+                <div className="text-primary text-lg">12</div>
+                <div className="text-muted-foreground">gpu</div>
+              </div>
+              <div>
+                <div className="text-primary text-lg">99.98%</div>
+                <div className="text-muted-foreground">30d up</div>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </div>
+  );
+}
+
 
 const SOURCE_ICON: Record<Source["kind"], typeof Camera> = {
   dashcam: Car,
