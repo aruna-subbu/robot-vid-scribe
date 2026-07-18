@@ -515,14 +515,7 @@ function ResultsPanel({ query }: { query: string }) {
               className="panel rounded-lg p-3 flex gap-4 hover:border-primary/40 transition-colors group"
             >
               <div className="relative w-48 aspect-video rounded-md overflow-hidden bg-muted shrink-0">
-                <img
-                  src={clip.thumb}
-                  alt={clip.title}
-                  loading="lazy"
-                  width={1024}
-                  height={576}
-                  className="h-full w-full object-cover"
-                />
+                <ClipMedia clip={clip} />
                 <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent" />
                 <div className="absolute bottom-1.5 left-1.5 font-mono text-[10px] px-1.5 py-0.5 rounded bg-background/80 text-primary">
                   ▸ {m.timestamp}
@@ -651,13 +644,9 @@ function ClipCard({
       }`}
     >
       <div className="relative aspect-video bg-muted overflow-hidden">
-        <img
-          src={clip.thumb}
-          alt={clip.title}
-          loading="lazy"
-          width={1024}
-          height={576}
-          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+        <ClipMedia
+          clip={clip}
+          className="transition-transform duration-500 group-hover:scale-105"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-background via-background/30 to-transparent" />
         <div className="absolute top-2 left-2 flex items-center gap-1.5">
@@ -758,13 +747,7 @@ function ClipDetail({ clip }: { clip: Clip }) {
   return (
     <div className="panel rounded-lg overflow-hidden">
       <div className="relative aspect-video bg-muted">
-        <img
-          src={clip.thumb}
-          alt={clip.title}
-          width={1024}
-          height={576}
-          className="h-full w-full object-cover"
-        />
+        <ClipMedia clip={clip} />
         <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-transparent" />
         <div className="absolute inset-0 grid place-items-center">
           <button className="h-12 w-12 rounded-full bg-primary text-primary-foreground grid place-items-center glow-cyan">
