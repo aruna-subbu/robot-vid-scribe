@@ -30,6 +30,13 @@ import thumbHumanoid from "@/assets/thumb-humanoid.jpg";
 import thumbCrosswalk from "@/assets/thumb-crosswalk.jpg";
 import thumbJaywalk from "@/assets/thumb-jaywalk.jpg";
 import thumbBiking from "@/assets/thumb-biking.jpg";
+import clipCrosswalkAsset from "@/assets/clip-crosswalk.mp4.asset.json";
+import clipJaywalkAsset from "@/assets/clip-jaywalk.mp4.asset.json";
+import clipBikingAsset from "@/assets/clip-biking.mp4.asset.json";
+
+const clipCrosswalkVideo = clipCrosswalkAsset.url;
+const clipJaywalkVideo = clipJaywalkAsset.url;
+const clipBikingVideo = clipBikingAsset.url;
 
 export const Route = createFileRoute("/")({
   component: Index,
@@ -46,6 +53,7 @@ type Clip = {
   captured: string;
   tags: string[];
   thumb: string;
+  video?: string;
   status: "indexed" | "embedding" | "queued";
 };
 
@@ -113,6 +121,7 @@ const CLIPS: Clip[] = [
     captured: "3d ago",
     tags: ["pedestrian", "crosswalk", "urban", "vru"],
     thumb: thumbCrosswalk,
+    video: clipCrosswalkVideo,
     status: "indexed",
   },
   {
@@ -126,6 +135,7 @@ const CLIPS: Clip[] = [
     captured: "3d ago",
     tags: ["pedestrian", "jaywalk", "vru", "edge-case"],
     thumb: thumbJaywalk,
+    video: clipJaywalkVideo,
     status: "indexed",
   },
   {
@@ -139,6 +149,7 @@ const CLIPS: Clip[] = [
     captured: "4d ago",
     tags: ["cyclist", "vru", "residential", "yield"],
     thumb: thumbBiking,
+    video: clipBikingVideo,
     status: "embedding",
   },
 ];
@@ -504,14 +515,7 @@ function ResultsPanel({ query }: { query: string }) {
               className="panel rounded-lg p-3 flex gap-4 hover:border-primary/40 transition-colors group"
             >
               <div className="relative w-48 aspect-video rounded-md overflow-hidden bg-muted shrink-0">
-                <img
-                  src={clip.thumb}
-                  alt={clip.title}
-                  loading="lazy"
-                  width={1024}
-                  height={576}
-                  className="h-full w-full object-cover"
-                />
+                <ClipMedia clip={clip} />
                 <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent" />
                 <div className="absolute bottom-1.5 left-1.5 font-mono text-[10px] px-1.5 py-0.5 rounded bg-background/80 text-primary">
                   ▸ {m.timestamp}
@@ -640,13 +644,9 @@ function ClipCard({
       }`}
     >
       <div className="relative aspect-video bg-muted overflow-hidden">
-        <img
-          src={clip.thumb}
-          alt={clip.title}
-          loading="lazy"
-          width={1024}
-          height={576}
-          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+        <ClipMedia
+          clip={clip}
+          className="transition-transform duration-500 group-hover:scale-105"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-background via-background/30 to-transparent" />
         <div className="absolute top-2 left-2 flex items-center gap-1.5">
@@ -702,6 +702,33 @@ function StatusDot({ status }: { status: Clip["status"] }) {
   );
 }
 
+function ClipMedia({ clip, className = "" }: { clip: Clip; className?: string }) {
+  if (clip.video) {
+    return (
+      <video
+        src={clip.video}
+        poster={clip.thumb}
+        autoPlay
+        muted
+        loop
+        playsInline
+        preload="metadata"
+        className={`h-full w-full object-cover ${className}`}
+      />
+    );
+  }
+  return (
+    <img
+      src={clip.thumb}
+      alt={clip.title}
+      loading="lazy"
+      width={1024}
+      height={576}
+      className={`h-full w-full object-cover ${className}`}
+    />
+  );
+}
+
 /* ------------------------------ Ingest panel ------------------------------ */
 
 function IngestPanel() {
@@ -747,13 +774,7 @@ function ClipDetail({ clip }: { clip: Clip }) {
   return (
     <div className="panel rounded-lg overflow-hidden">
       <div className="relative aspect-video bg-muted">
-        <img
-          src={clip.thumb}
-          alt={clip.title}
-          width={1024}
-          height={576}
-          className="h-full w-full object-cover"
-        />
+        <ClipMedia clip={clip} />
         <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-transparent" />
         <div className="absolute inset-0 grid place-items-center">
           <button className="h-12 w-12 rounded-full bg-primary text-primary-foreground grid place-items-center glow-cyan">
