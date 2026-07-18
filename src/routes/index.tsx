@@ -30,6 +30,13 @@ import thumbHumanoid from "@/assets/thumb-humanoid.jpg";
 import thumbCrosswalk from "@/assets/thumb-crosswalk.jpg";
 import thumbJaywalk from "@/assets/thumb-jaywalk.jpg";
 import thumbBiking from "@/assets/thumb-biking.jpg";
+import clipCrosswalkAsset from "@/assets/clip-crosswalk.mp4.asset.json";
+import clipJaywalkAsset from "@/assets/clip-jaywalk.mp4.asset.json";
+import clipBikingAsset from "@/assets/clip-biking.mp4.asset.json";
+
+const clipCrosswalkVideo = clipCrosswalkAsset.url;
+const clipJaywalkVideo = clipJaywalkAsset.url;
+const clipBikingVideo = clipBikingAsset.url;
 
 export const Route = createFileRoute("/")({
   component: Index,
@@ -46,6 +53,7 @@ type Clip = {
   captured: string;
   tags: string[];
   thumb: string;
+  video?: string;
   status: "indexed" | "embedding" | "queued";
 };
 
@@ -113,6 +121,7 @@ const CLIPS: Clip[] = [
     captured: "3d ago",
     tags: ["pedestrian", "crosswalk", "urban", "vru"],
     thumb: thumbCrosswalk,
+    video: clipCrosswalkVideo,
     status: "indexed",
   },
   {
@@ -126,6 +135,7 @@ const CLIPS: Clip[] = [
     captured: "3d ago",
     tags: ["pedestrian", "jaywalk", "vru", "edge-case"],
     thumb: thumbJaywalk,
+    video: clipJaywalkVideo,
     status: "indexed",
   },
   {
@@ -139,6 +149,7 @@ const CLIPS: Clip[] = [
     captured: "4d ago",
     tags: ["cyclist", "vru", "residential", "yield"],
     thumb: thumbBiking,
+    video: clipBikingVideo,
     status: "embedding",
   },
 ];
