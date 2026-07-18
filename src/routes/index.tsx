@@ -2,8 +2,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useRef, useState } from "react";
 import {
   Activity,
-  AlertTriangle,
-  Bot,
   ChevronRight,
   CircleDot,
   Cpu,
@@ -22,9 +20,13 @@ import {
   Video,
   Webhook,
   Zap,
-  Battery,
-  Wifi,
-  Gauge,
+  HardDrive,
+  Waves,
+  Camera,
+  Smartphone,
+  Plane,
+  Car,
+  Cpu as CpuIcon,
 } from "lucide-react";
 
 import thumbGrasp from "@/assets/thumb-grasp.jpg";
@@ -205,63 +207,60 @@ const MATCHES: Match[] = [
 ];
 
 const NAV = [
-  { label: "Observability", icon: Activity, view: "observability" as const },
+  { label: "Pipeline", icon: Activity, view: "pipeline" as const },
   { label: "Library", icon: Video, view: "library" as const, count: 1247 },
   { label: "Ingest", icon: Upload, view: "library" as const },
   { label: "Search", icon: Search, view: "library" as const },
   { label: "Datasets", icon: Layers, view: "library" as const },
-  { label: "Robots", icon: Bot, view: "observability" as const, count: 12 },
+  { label: "Sources", icon: Camera, view: "pipeline" as const, count: 8 },
   { label: "Webhooks", icon: Webhook, view: "library" as const },
   { label: "API keys", icon: Terminal, view: "library" as const },
   { label: "Settings", icon: Settings, view: "library" as const },
 ];
 
-type View = "observability" | "library";
+type View = "pipeline" | "library";
 
-type Robot = {
+type Source = {
   id: string;
   name: string;
-  kind: string;
-  site: string;
-  status: "online" | "degraded" | "offline";
-  battery: number;
-  cpu: number;
-  net: number;
-  uptime: string;
-  lastSeen: string;
-  fps: number;
+  kind: "dashcam" | "drone" | "phone" | "robot" | "upload";
+  origin: string;
+  status: "streaming" | "queued" | "paused";
+  hoursIn: number;   // hours ingested (last 24h)
+  indexLag: string;  // e.g. "0s", "2m"
+  compression: number; // x-ratio
 };
 
-const ROBOTS: Robot[] = [
-  { id: "arm-04",       name: "arm-04",       kind: "Manipulator",     site: "lab-a · cell 3",  status: "online",   battery: 87, cpu: 42, net: 96, uptime: "12d 04h", lastSeen: "just now", fps: 60 },
-  { id: "spot-02",      name: "spot-02",      kind: "Quadruped",       site: "warehouse-w",     status: "online",   battery: 64, cpu: 71, net: 88, uptime: "3d 22h",  lastSeen: "1s ago",   fps: 30 },
-  { id: "amr-11",       name: "amr-11",       kind: "AMR · Indoor",    site: "warehouse-e",     status: "degraded", battery: 41, cpu: 88, net: 62, uptime: "8h 12m",  lastSeen: "2s ago",   fps: 30 },
-  { id: "humanoid-01",  name: "humanoid-01",  kind: "Humanoid",        site: "lab-b",           status: "online",   battery: 92, cpu: 55, net: 99, uptime: "1d 06h",  lastSeen: "just now", fps: 60 },
-  { id: "av-07",        name: "av-07",        kind: "AV · Urban",      site: "downtown-loop",   status: "online",   battery: 78, cpu: 60, net: 91, uptime: "05h 44m", lastSeen: "just now", fps: 30 },
-  { id: "av-09",        name: "av-09",        kind: "AV · Residential",site: "suburb-r2",       status: "offline",  battery: 12, cpu: 0,  net: 0,  uptime: "—",       lastSeen: "14m ago",  fps: 0  },
+const SOURCES: Source[] = [
+  { id: "dashcam-fleet-a", name: "dashcam / fleet-a",   kind: "dashcam", origin: "downtown-loop",  status: "streaming", hoursIn: 42.6, indexLag: "0s",  compression: 19.2 },
+  { id: "drone-survey-3",  name: "drone / survey-3",    kind: "drone",   origin: "site-north",     status: "streaming", hoursIn: 8.1,  indexLag: "1s",  compression: 17.4 },
+  { id: "phone-ops-ios",   name: "phone / ops-ios sdk", kind: "phone",   origin: "field · 24 devs",status: "streaming", hoursIn: 12.9, indexLag: "3s",  compression: 21.0 },
+  { id: "robot-arm-04",    name: "robot / arm-04",      kind: "robot",   origin: "lab-a · cell 3", status: "streaming", hoursIn: 6.3,  indexLag: "0s",  compression: 16.8 },
+  { id: "upload-s3-bulk",  name: "s3 / bulk-archive",   kind: "upload",  origin: "s3://acme-vid",  status: "queued",    hoursIn: 214,  indexLag: "6m",  compression: 18.1 },
+  { id: "webhook-partner", name: "webhook / partner-x", kind: "upload",  origin: "api · rest",     status: "paused",    hoursIn: 0,    indexLag: "—",   compression: 0    },
 ];
 
-type Alert = {
+type Event = {
   id: string;
-  severity: "critical" | "warn" | "info";
-  robot: string;
+  severity: "ok" | "warn" | "info";
+  source: string;
   message: string;
   time: string;
 };
 
-const ALERTS: Alert[] = [
-  { id: "a1", severity: "critical", robot: "av-09",       message: "Heartbeat lost — last frame 14m ago",           time: "14m" },
-  { id: "a2", severity: "warn",     robot: "amr-11",      message: "CPU 88% sustained · downshifting ingest FPS",   time: "3m"  },
-  { id: "a3", severity: "warn",     robot: "amr-11",      message: "Battery 41% · returning to dock in 6m",         time: "1m"  },
-  { id: "a4", severity: "info",     robot: "arm-04",      message: "Policy v3.2 deployed · warmup complete",        time: "22m" },
-  { id: "a5", severity: "info",     robot: "spot-02",     message: "Ingest resumed after WiFi flap",                time: "42m" },
+const EVENTS: Event[] = [
+  { id: "e1", severity: "ok",   source: "dashcam-fleet-a", message: "12,481 segments embedded · segclip-v2",        time: "just now" },
+  { id: "e2", severity: "info", source: "upload-s3-bulk",  message: "Batch reindex started · 4,200 clips queued",   time: "2m" },
+  { id: "e3", severity: "warn", source: "webhook-partner", message: "Ingest paused · awaiting API key rotation",    time: "8m" },
+  { id: "e4", severity: "ok",   source: "phone-ops-ios",   message: "SDK v0.4.1 rolled out · compression +6%",      time: "34m" },
+  { id: "e5", severity: "info", source: "drone-survey-3",  message: "New concept 'aerial-inspection' auto-clustered", time: "1h" },
 ];
 
 function Index() {
   const [query, setQuery] = useState("");
   const [listening, setListening] = useState(false);
   const [selected, setSelected] = useState<string | null>("clip_01H8Z9");
-  const [view, setView] = useState<View>("observability");
+  const [view, setView] = useState<View>("pipeline");
   const inputRef = useRef<HTMLInputElement>(null);
 
   const activeClip = useMemo(
@@ -279,8 +278,8 @@ function Index() {
           <TopBar view={view} />
           <div className="mx-auto max-w-[1400px] px-8 py-8 space-y-8">
             <Header view={view} />
-            {view === "observability" ? (
-              <ObservabilityView onJumpToSearch={() => setView("library")} />
+            {view === "pipeline" ? (
+              <PipelineView onJumpToSearch={() => setView("library")} />
             ) : (
               <>
             <SearchBar
@@ -408,7 +407,7 @@ function TopBar({ view }: { view: View }) {
         <ChevronRight className="h-3 w-3" />
         <span>workspace</span>
         <ChevronRight className="h-3 w-3" />
-        <span className="text-primary">{view === "observability" ? "observability" : "library"}</span>
+        <span className="text-primary">{view === "pipeline" ? "pipeline" : "library"}</span>
       </div>
       <div className="flex items-center gap-2">
         <StatusPill icon={Radio} label="ingest" value="live" />
@@ -442,19 +441,20 @@ function StatusPill({
 }
 
 function Header({ view }: { view: View }) {
-  if (view === "observability") {
+  if (view === "pipeline") {
     return (
       <div className="space-y-3">
         <div className="flex items-center gap-2 font-mono text-[11px] text-primary">
           <CircleDot className="h-3 w-3" />
-          <span className="uppercase tracking-[0.2em]">observability · live</span>
+          <span className="uppercase tracking-[0.2em]">pipeline · live</span>
         </div>
         <h1 className="text-4xl md:text-5xl font-semibold tracking-tight leading-[1.05]">
-          Every stream, <span className="text-primary text-glow">one glance</span>.
+          Every source, <span className="text-primary text-glow">one index</span>.
         </h1>
         <p className="text-muted-foreground max-w-2xl text-[15px] leading-relaxed">
-          Health, ingest rate and index lag across every source feeding the video DB —
-          robots, dashcams, drones, phones. Jump straight to the frame with natural-language search.
+          Ingest, compress and embed every hour of video landing in segclip.db — dashcams, drones,
+          phones, robots, bulk uploads. Watch throughput, storage saved and index lag, then jump
+          to any moment with plain English.
         </p>
       </div>
     );
@@ -484,19 +484,28 @@ function Header({ view }: { view: View }) {
   );
 }
 
-/* ------------------------------ Observability ------------------------------ */
+/* ------------------------------ Pipeline ------------------------------ */
 
-function ObservabilityView({ onJumpToSearch }: { onJumpToSearch: () => void }) {
-  const online = ROBOTS.filter((r) => r.status === "online").length;
-  const degraded = ROBOTS.filter((r) => r.status === "degraded").length;
-  const offline = ROBOTS.filter((r) => r.status === "offline").length;
-  const streaming = ROBOTS.filter((r) => r.fps > 0).length;
+const SOURCE_ICON: Record<Source["kind"], typeof Camera> = {
+  dashcam: Car,
+  drone: Plane,
+  phone: Smartphone,
+  robot: CpuIcon,
+  upload: Upload,
+};
+
+function PipelineView({ onJumpToSearch }: { onJumpToSearch: () => void }) {
+  const streaming = SOURCES.filter((s) => s.status === "streaming").length;
+  const totalHours = SOURCES.reduce((a, s) => a + s.hoursIn, 0);
+  const active = SOURCES.filter((s) => s.compression > 0);
+  const avgCompression =
+    active.reduce((a, s) => a + s.compression, 0) / Math.max(1, active.length);
 
   const stats = [
-    { label: "robots online",   value: `${online}/${ROBOTS.length}`, delta: `${degraded} degraded · ${offline} offline`, icon: Bot },
-    { label: "streaming now",   value: `${streaming}`,               delta: "ingest live",                                 icon: Radio },
-    { label: "avg cpu",         value: `${Math.round(ROBOTS.filter(r => r.status !== "offline").reduce((a,r) => a+r.cpu, 0) / Math.max(1, ROBOTS.filter(r=>r.status!=="offline").length))}%`, delta: "60s window", icon: Cpu },
-    { label: "open alerts",     value: `${ALERTS.length}`,           delta: `${ALERTS.filter(a=>a.severity==="critical").length} critical`, icon: AlertTriangle },
+    { label: "sources streaming", value: `${streaming}/${SOURCES.length}`, delta: "ingest live",                                    icon: Radio },
+    { label: "hours ingested",    value: `${totalHours.toFixed(1)}h`,      delta: "last 24h",                                        icon: Waves },
+    { label: "avg compression",   value: `${avgCompression.toFixed(1)}×`,  delta: "h265 · segclip-aware",                            icon: HardDrive },
+    { label: "index lag",         value: `1s`,                             delta: "p95 · segclip-v2 · 512d",                         icon: Cpu },
   ];
 
   return (
@@ -518,52 +527,74 @@ function ObservabilityView({ onJumpToSearch }: { onJumpToSearch: () => void }) {
 
       <div className="grid grid-cols-12 gap-6">
         <section className="col-span-12 xl:col-span-8 space-y-4">
-          <SectionHeader eyebrow="fleet" title="Robots" hint={`${ROBOTS.length} devices · updated live`} />
+          <SectionHeader
+            eyebrow="ingest"
+            title="Sources"
+            hint={`${SOURCES.length} connected · any camera, any format`}
+          />
           <div className="panel rounded-lg overflow-hidden">
             <div className="grid grid-cols-12 gap-2 px-4 py-2.5 font-mono text-[10px] uppercase tracking-widest text-muted-foreground border-b border-border">
-              <div className="col-span-3">robot</div>
-              <div className="col-span-2">site</div>
+              <div className="col-span-4">source</div>
+              <div className="col-span-3">origin</div>
               <div className="col-span-2">status</div>
-              <div className="col-span-1">batt</div>
-              <div className="col-span-1">cpu</div>
-              <div className="col-span-1">net</div>
-              <div className="col-span-2 text-right">last seen</div>
+              <div className="col-span-1 text-right">hrs/24h</div>
+              <div className="col-span-1 text-right">compr.</div>
+              <div className="col-span-1 text-right">lag</div>
             </div>
-            {ROBOTS.map((r) => (
-              <div
-                key={r.id}
-                className="grid grid-cols-12 gap-2 px-4 py-3 items-center border-b border-border/60 last:border-b-0 hover:bg-secondary/30 transition-colors"
-              >
-                <div className="col-span-3 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className={`h-2 w-2 rounded-full ${
-                      r.status === "online" ? "bg-primary" :
-                      r.status === "degraded" ? "bg-yellow-400" : "bg-destructive"
-                    }`} />
-                    <span className="font-mono text-sm text-foreground truncate">{r.name}</span>
+            {SOURCES.map((s) => {
+              const Icon = SOURCE_ICON[s.kind];
+              return (
+                <div
+                  key={s.id}
+                  className="grid grid-cols-12 gap-2 px-4 py-3 items-center border-b border-border/60 last:border-b-0 hover:bg-secondary/30 transition-colors"
+                >
+                  <div className="col-span-4 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <Icon className="h-3.5 w-3.5 text-primary shrink-0" />
+                      <span className="font-mono text-sm text-foreground truncate">{s.name}</span>
+                    </div>
+                    <div className="font-mono text-[10px] text-muted-foreground pl-5 uppercase tracking-widest">
+                      {s.kind}
+                    </div>
                   </div>
-                  <div className="font-mono text-[10px] text-muted-foreground pl-4">{r.kind}</div>
+                  <div className="col-span-3 font-mono text-[11px] text-muted-foreground truncate">
+                    {s.origin}
+                  </div>
+                  <div className="col-span-2">
+                    <span
+                      className={`font-mono text-[10px] uppercase tracking-widest px-1.5 py-0.5 rounded ${
+                        s.status === "streaming"
+                          ? "text-primary bg-primary/10"
+                          : s.status === "queued"
+                            ? "text-yellow-400 bg-yellow-400/10"
+                            : "text-muted-foreground bg-secondary/60"
+                      }`}
+                    >
+                      {s.status}
+                    </span>
+                  </div>
+                  <div className="col-span-1 text-right font-mono text-[11px] text-foreground">
+                    {s.hoursIn.toFixed(1)}
+                  </div>
+                  <div className="col-span-1 text-right font-mono text-[11px] text-primary">
+                    {s.compression > 0 ? `${s.compression.toFixed(1)}×` : "—"}
+                  </div>
+                  <div className="col-span-1 text-right font-mono text-[11px] text-muted-foreground">
+                    {s.indexLag}
+                  </div>
                 </div>
-                <div className="col-span-2 font-mono text-[11px] text-muted-foreground truncate">{r.site}</div>
-                <div className="col-span-2">
-                  <span className={`font-mono text-[10px] uppercase tracking-widest px-1.5 py-0.5 rounded ${
-                    r.status === "online" ? "text-primary bg-primary/10" :
-                    r.status === "degraded" ? "text-yellow-400 bg-yellow-400/10" :
-                    "text-destructive bg-destructive/10"
-                  }`}>{r.status}</span>
-                </div>
-                <div className="col-span-1"><MiniBar value={r.battery} icon={Battery} /></div>
-                <div className="col-span-1"><MiniBar value={r.cpu} icon={Gauge} inverted /></div>
-                <div className="col-span-1"><MiniBar value={r.net} icon={Wifi} /></div>
-                <div className="col-span-2 text-right font-mono text-[11px] text-muted-foreground">{r.lastSeen}</div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           <div className="panel rounded-lg p-5 flex items-center justify-between">
             <div>
-              <div className="font-mono text-[10px] uppercase tracking-widest text-primary">jump to video</div>
-              <div className="mt-1 text-sm">Investigate an incident? Search every session in plain English.</div>
+              <div className="font-mono text-[10px] uppercase tracking-widest text-primary">
+                query the index
+              </div>
+              <div className="mt-1 text-sm">
+                Ask "show me every left-turn near a pedestrian" — no tags, no filters.
+              </div>
             </div>
             <button
               onClick={onJumpToSearch}
@@ -576,41 +607,32 @@ function ObservabilityView({ onJumpToSearch }: { onJumpToSearch: () => void }) {
         </section>
 
         <aside className="col-span-12 xl:col-span-4 space-y-4">
-          <SectionHeader eyebrow="alerts" title="Active" hint={`${ALERTS.length} events`} />
+          <SectionHeader eyebrow="events" title="Pipeline log" hint={`${EVENTS.length} recent`} />
           <div className="panel rounded-lg divide-y divide-border/60">
-            {ALERTS.map((a) => (
-              <div key={a.id} className="p-3.5 flex gap-3">
-                <span className={`mt-1 h-2 w-2 shrink-0 rounded-full ${
-                  a.severity === "critical" ? "bg-destructive" :
-                  a.severity === "warn" ? "bg-yellow-400" : "bg-primary/70"
-                }`} />
+            {EVENTS.map((e) => (
+              <div key={e.id} className="p-3.5 flex gap-3">
+                <span
+                  className={`mt-1 h-2 w-2 shrink-0 rounded-full ${
+                    e.severity === "warn"
+                      ? "bg-yellow-400"
+                      : e.severity === "ok"
+                        ? "bg-primary"
+                        : "bg-primary/60"
+                  }`}
+                />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 font-mono text-[10px] text-muted-foreground">
-                    <span className="text-primary">{a.robot}</span>
+                    <span className="text-primary truncate">{e.source}</span>
                     <span>·</span>
-                    <span className="uppercase tracking-widest">{a.severity}</span>
-                    <span className="ml-auto">{a.time}</span>
+                    <span className="uppercase tracking-widest">{e.severity}</span>
+                    <span className="ml-auto">{e.time}</span>
                   </div>
-                  <div className="mt-1 text-sm text-foreground/90 leading-snug">{a.message}</div>
+                  <div className="mt-1 text-sm text-foreground/90 leading-snug">{e.message}</div>
                 </div>
               </div>
             ))}
           </div>
         </aside>
-      </div>
-    </div>
-  );
-}
-
-function MiniBar({ value, icon: Icon, inverted }: { value: number; icon: typeof Battery; inverted?: boolean }) {
-  const good = inverted ? value < 70 : value > 50;
-  const warn = inverted ? value >= 70 && value < 90 : value <= 50 && value > 20;
-  const color = good ? "bg-primary" : warn ? "bg-yellow-400" : "bg-destructive";
-  return (
-    <div className="flex items-center gap-1.5">
-      <Icon className="h-3 w-3 text-muted-foreground shrink-0" />
-      <div className="flex-1 h-1.5 rounded-full bg-secondary/60 overflow-hidden">
-        <div className={`h-full ${color}`} style={{ width: `${Math.max(3, value)}%` }} />
       </div>
     </div>
   );
