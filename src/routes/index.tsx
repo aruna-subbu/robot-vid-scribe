@@ -407,10 +407,11 @@ function SearchBar({
   inputRef: React.RefObject<HTMLInputElement | null>;
 }) {
   const suggestions = [
+    "kids crossing at a green light",
+    "child jaywalking mid-block",
+    "child on a bike crossing the lane",
     "clips where the gripper slipped",
     "quadruped avoiding an obstacle",
-    "policy-v3 bimanual failures last week",
-    "AMR near forklift",
   ];
 
   return (
