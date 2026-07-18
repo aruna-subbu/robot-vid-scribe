@@ -786,10 +786,10 @@ function ResultsPanel({ query }: { query: string }) {
 
 function StatsRow() {
   const stats = [
-    { label: "clips indexed", value: "1,247", delta: "+38 today", icon: Video },
-    { label: "hours of footage", value: "412h", delta: "+2.1h today", icon: Database },
-    { label: "avg query latency", value: "47ms", delta: "p95 · 112ms", icon: Zap },
-    { label: "active robots", value: "12", delta: "3 streaming now", icon: Bot },
+    { label: "videos indexed",    value: "1,247", delta: "+38 today · no tagging",  icon: Video },
+    { label: "hours ingested",    value: "412h",  delta: "3.4 TB → 190 GB stored",  icon: Database },
+    { label: "avg query latency", value: "47ms",  delta: "p95 · 112ms",             icon: Zap },
+    { label: "compression ratio", value: "18×",   delta: "h265 + segclip embeds",   icon: Cpu },
   ];
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
