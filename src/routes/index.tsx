@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useRef, useState } from "react";
 import {
   Activity,
+  AlertTriangle,
   Bot,
   ChevronRight,
   CircleDot,
@@ -21,6 +22,9 @@ import {
   Video,
   Webhook,
   Zap,
+  Battery,
+  Wifi,
+  Gauge,
 } from "lucide-react";
 
 import thumbGrasp from "@/assets/thumb-grasp.jpg";
@@ -201,20 +205,63 @@ const MATCHES: Match[] = [
 ];
 
 const NAV = [
-  { label: "Library", icon: Video, active: true, count: 1247 },
-  { label: "Ingest", icon: Upload },
-  { label: "Search", icon: Search },
-  { label: "Datasets", icon: Layers },
-  { label: "Robots", icon: Bot, count: 12 },
-  { label: "Webhooks", icon: Webhook },
-  { label: "API keys", icon: Terminal },
-  { label: "Settings", icon: Settings },
+  { label: "Observability", icon: Activity, view: "observability" as const },
+  { label: "Library", icon: Video, view: "library" as const, count: 1247 },
+  { label: "Ingest", icon: Upload, view: "library" as const },
+  { label: "Search", icon: Search, view: "library" as const },
+  { label: "Datasets", icon: Layers, view: "library" as const },
+  { label: "Robots", icon: Bot, view: "observability" as const, count: 12 },
+  { label: "Webhooks", icon: Webhook, view: "library" as const },
+  { label: "API keys", icon: Terminal, view: "library" as const },
+  { label: "Settings", icon: Settings, view: "library" as const },
+];
+
+type View = "observability" | "library";
+
+type Robot = {
+  id: string;
+  name: string;
+  kind: string;
+  site: string;
+  status: "online" | "degraded" | "offline";
+  battery: number;
+  cpu: number;
+  net: number;
+  uptime: string;
+  lastSeen: string;
+  fps: number;
+};
+
+const ROBOTS: Robot[] = [
+  { id: "arm-04",       name: "arm-04",       kind: "Manipulator",     site: "lab-a · cell 3",  status: "online",   battery: 87, cpu: 42, net: 96, uptime: "12d 04h", lastSeen: "just now", fps: 60 },
+  { id: "spot-02",      name: "spot-02",      kind: "Quadruped",       site: "warehouse-w",     status: "online",   battery: 64, cpu: 71, net: 88, uptime: "3d 22h",  lastSeen: "1s ago",   fps: 30 },
+  { id: "amr-11",       name: "amr-11",       kind: "AMR · Indoor",    site: "warehouse-e",     status: "degraded", battery: 41, cpu: 88, net: 62, uptime: "8h 12m",  lastSeen: "2s ago",   fps: 30 },
+  { id: "humanoid-01",  name: "humanoid-01",  kind: "Humanoid",        site: "lab-b",           status: "online",   battery: 92, cpu: 55, net: 99, uptime: "1d 06h",  lastSeen: "just now", fps: 60 },
+  { id: "av-07",        name: "av-07",        kind: "AV · Urban",      site: "downtown-loop",   status: "online",   battery: 78, cpu: 60, net: 91, uptime: "05h 44m", lastSeen: "just now", fps: 30 },
+  { id: "av-09",        name: "av-09",        kind: "AV · Residential",site: "suburb-r2",       status: "offline",  battery: 12, cpu: 0,  net: 0,  uptime: "—",       lastSeen: "14m ago",  fps: 0  },
+];
+
+type Alert = {
+  id: string;
+  severity: "critical" | "warn" | "info";
+  robot: string;
+  message: string;
+  time: string;
+};
+
+const ALERTS: Alert[] = [
+  { id: "a1", severity: "critical", robot: "av-09",       message: "Heartbeat lost — last frame 14m ago",           time: "14m" },
+  { id: "a2", severity: "warn",     robot: "amr-11",      message: "CPU 88% sustained · downshifting ingest FPS",   time: "3m"  },
+  { id: "a3", severity: "warn",     robot: "amr-11",      message: "Battery 41% · returning to dock in 6m",         time: "1m"  },
+  { id: "a4", severity: "info",     robot: "arm-04",      message: "Policy v3.2 deployed · warmup complete",        time: "22m" },
+  { id: "a5", severity: "info",     robot: "spot-02",     message: "Ingest resumed after WiFi flap",                time: "42m" },
 ];
 
 function Index() {
   const [query, setQuery] = useState("");
   const [listening, setListening] = useState(false);
   const [selected, setSelected] = useState<string | null>("clip_01H8Z9");
+  const [view, setView] = useState<View>("observability");
   const inputRef = useRef<HTMLInputElement>(null);
 
   const activeClip = useMemo(
@@ -227,11 +274,15 @@ function Index() {
   return (
     <div className="min-h-screen text-foreground">
       <div className="flex min-h-screen">
-        <Sidebar />
+        <Sidebar view={view} onChange={setView} />
         <main className="flex-1 min-w-0">
-          <TopBar />
+          <TopBar view={view} />
           <div className="mx-auto max-w-[1400px] px-8 py-8 space-y-8">
-            <Header />
+            <Header view={view} />
+            {view === "observability" ? (
+              <ObservabilityView onJumpToSearch={() => setView("library")} />
+            ) : (
+              <>
             <SearchBar
               value={query}
               onChange={setQuery}
@@ -274,6 +325,8 @@ function Index() {
                 </div>
               </>
             )}
+              </>
+            )}
           </div>
         </main>
       </div>
@@ -283,7 +336,7 @@ function Index() {
 
 /* ------------------------------ Layout parts ------------------------------ */
 
-function Sidebar() {
+function Sidebar({ view, onChange }: { view: View; onChange: (v: View) => void }) {
   return (
     <aside className="hidden lg:flex w-64 shrink-0 flex-col border-r border-border bg-sidebar/70 backdrop-blur">
       <div className="h-16 flex items-center gap-2.5 px-5 border-b border-border">
@@ -299,24 +352,28 @@ function Sidebar() {
         <div className="px-2 pt-2 pb-1 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
           workspace
         </div>
-        {NAV.map((item) => (
-          <button
-            key={item.label}
-            className={`w-full group flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-sm transition-colors ${
-              item.active
-                ? "bg-primary/10 text-primary"
-                : "text-muted-foreground hover:text-foreground hover:bg-secondary/60"
-            }`}
-          >
-            <item.icon className="h-4 w-4" />
-            <span>{item.label}</span>
-            {item.count && (
-              <span className="ml-auto font-mono text-[10px] text-muted-foreground group-hover:text-foreground">
-                {item.count.toLocaleString()}
-              </span>
-            )}
-          </button>
-        ))}
+        {NAV.map((item) => {
+          const active = item.view === view;
+          return (
+            <button
+              key={item.label}
+              onClick={() => onChange(item.view)}
+              className={`w-full group flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-sm transition-colors ${
+                active
+                  ? "bg-primary/10 text-primary"
+                  : "text-muted-foreground hover:text-foreground hover:bg-secondary/60"
+              }`}
+            >
+              <item.icon className="h-4 w-4" />
+              <span>{item.label}</span>
+              {item.count && (
+                <span className="ml-auto font-mono text-[10px] text-muted-foreground group-hover:text-foreground">
+                  {item.count.toLocaleString()}
+                </span>
+              )}
+            </button>
+          );
+        })}
       </nav>
       <div className="p-3 border-t border-border">
         <div className="panel rounded-md p-3 space-y-2">
