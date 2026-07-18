@@ -404,18 +404,19 @@ function TopBar({ view }: { view: View }) {
   return (
     <div className="h-16 border-b border-border flex items-center justify-between px-6 lg:px-8 bg-background/40 backdrop-blur">
       <div className="flex items-center gap-3 font-mono text-[11px] text-muted-foreground">
-        <span className="text-foreground">workspace</span>
+        <span className="text-foreground">segclip.db</span>
         <ChevronRight className="h-3 w-3" />
-        <span>robotics-lab</span>
+        <span>workspace</span>
         <ChevronRight className="h-3 w-3" />
         <span className="text-primary">{view === "observability" ? "observability" : "library"}</span>
       </div>
       <div className="flex items-center gap-2">
         <StatusPill icon={Radio} label="ingest" value="live" />
-        <StatusPill icon={Activity} label="index" value="2 pending" />
+        <StatusPill icon={Cpu} label="segclip" value="v2 · 512d" />
+        <StatusPill icon={Database} label="compressed" value="18× · h265" />
         <button className="ml-2 inline-flex items-center gap-1.5 h-8 px-3 rounded-md bg-primary text-primary-foreground text-xs font-medium hover:opacity-90 transition-opacity">
           <Plus className="h-3.5 w-3.5" />
-          New capture
+          Upload video
         </button>
       </div>
     </div>
