@@ -702,6 +702,33 @@ function StatusDot({ status }: { status: Clip["status"] }) {
   );
 }
 
+function ClipMedia({ clip, className = "" }: { clip: Clip; className?: string }) {
+  if (clip.video) {
+    return (
+      <video
+        src={clip.video}
+        poster={clip.thumb}
+        autoPlay
+        muted
+        loop
+        playsInline
+        preload="metadata"
+        className={`h-full w-full object-cover ${className}`}
+      />
+    );
+  }
+  return (
+    <img
+      src={clip.thumb}
+      alt={clip.title}
+      loading="lazy"
+      width={1024}
+      height={576}
+      className={`h-full w-full object-cover ${className}`}
+    />
+  );
+}
+
 /* ------------------------------ Ingest panel ------------------------------ */
 
 function IngestPanel() {
