@@ -400,7 +400,7 @@ function Sidebar({ view, onChange }: { view: View; onChange: (v: View) => void }
   );
 }
 
-function TopBar() {
+function TopBar({ view }: { view: View }) {
   return (
     <div className="h-16 border-b border-border flex items-center justify-between px-6 lg:px-8 bg-background/40 backdrop-blur">
       <div className="flex items-center gap-3 font-mono text-[11px] text-muted-foreground">
@@ -408,7 +408,7 @@ function TopBar() {
         <ChevronRight className="h-3 w-3" />
         <span>robotics-lab</span>
         <ChevronRight className="h-3 w-3" />
-        <span className="text-primary">library</span>
+        <span className="text-primary">{view === "observability" ? "observability" : "library"}</span>
       </div>
       <div className="flex items-center gap-2">
         <StatusPill icon={Radio} label="ingest" value="live" />
@@ -440,7 +440,24 @@ function StatusPill({
   );
 }
 
-function Header() {
+function Header({ view }: { view: View }) {
+  if (view === "observability") {
+    return (
+      <div className="space-y-3">
+        <div className="flex items-center gap-2 font-mono text-[11px] text-primary">
+          <CircleDot className="h-3 w-3" />
+          <span className="uppercase tracking-[0.2em]">fleet ops · live</span>
+        </div>
+        <h1 className="text-4xl md:text-5xl font-semibold tracking-tight leading-[1.05]">
+          Your fleet, <span className="text-primary text-glow">one glance</span>.
+        </h1>
+        <p className="text-muted-foreground max-w-2xl text-[15px] leading-relaxed">
+          Live telemetry, alerts and session capture across every robot — then jump straight to
+          the video with natural-language search.
+        </p>
+      </div>
+    );
+  }
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2 font-mono text-[11px] text-primary">
@@ -455,6 +472,138 @@ function Header() {
         Push footage from any robot over REST or S3-compatible storage. Ask for what happened in plain
         English — or by voice — and jump to the exact frame.
       </p>
+    </div>
+  );
+}
+
+/* ------------------------------ Observability ------------------------------ */
+
+function ObservabilityView({ onJumpToSearch }: { onJumpToSearch: () => void }) {
+  const online = ROBOTS.filter((r) => r.status === "online").length;
+  const degraded = ROBOTS.filter((r) => r.status === "degraded").length;
+  const offline = ROBOTS.filter((r) => r.status === "offline").length;
+  const streaming = ROBOTS.filter((r) => r.fps > 0).length;
+
+  const stats = [
+    { label: "robots online",   value: `${online}/${ROBOTS.length}`, delta: `${degraded} degraded · ${offline} offline`, icon: Bot },
+    { label: "streaming now",   value: `${streaming}`,               delta: "ingest live",                                 icon: Radio },
+    { label: "avg cpu",         value: `${Math.round(ROBOTS.filter(r => r.status !== "offline").reduce((a,r) => a+r.cpu, 0) / Math.max(1, ROBOTS.filter(r=>r.status!=="offline").length))}%`, delta: "60s window", icon: Cpu },
+    { label: "open alerts",     value: `${ALERTS.length}`,           delta: `${ALERTS.filter(a=>a.severity==="critical").length} critical`, icon: AlertTriangle },
+  ];
+
+  return (
+    <div className="space-y-8">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {stats.map((s) => (
+          <div key={s.label} className="panel rounded-lg p-4">
+            <div className="flex items-center justify-between">
+              <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                {s.label}
+              </span>
+              <s.icon className="h-3.5 w-3.5 text-primary" />
+            </div>
+            <div className="mt-2 font-mono text-2xl font-semibold tracking-tight">{s.value}</div>
+            <div className="mt-1 font-mono text-[11px] text-muted-foreground">{s.delta}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-12 gap-6">
+        <section className="col-span-12 xl:col-span-8 space-y-4">
+          <SectionHeader eyebrow="fleet" title="Robots" hint={`${ROBOTS.length} devices · updated live`} />
+          <div className="panel rounded-lg overflow-hidden">
+            <div className="grid grid-cols-12 gap-2 px-4 py-2.5 font-mono text-[10px] uppercase tracking-widest text-muted-foreground border-b border-border">
+              <div className="col-span-3">robot</div>
+              <div className="col-span-2">site</div>
+              <div className="col-span-2">status</div>
+              <div className="col-span-1">batt</div>
+              <div className="col-span-1">cpu</div>
+              <div className="col-span-1">net</div>
+              <div className="col-span-2 text-right">last seen</div>
+            </div>
+            {ROBOTS.map((r) => (
+              <div
+                key={r.id}
+                className="grid grid-cols-12 gap-2 px-4 py-3 items-center border-b border-border/60 last:border-b-0 hover:bg-secondary/30 transition-colors"
+              >
+                <div className="col-span-3 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className={`h-2 w-2 rounded-full ${
+                      r.status === "online" ? "bg-primary" :
+                      r.status === "degraded" ? "bg-yellow-400" : "bg-destructive"
+                    }`} />
+                    <span className="font-mono text-sm text-foreground truncate">{r.name}</span>
+                  </div>
+                  <div className="font-mono text-[10px] text-muted-foreground pl-4">{r.kind}</div>
+                </div>
+                <div className="col-span-2 font-mono text-[11px] text-muted-foreground truncate">{r.site}</div>
+                <div className="col-span-2">
+                  <span className={`font-mono text-[10px] uppercase tracking-widest px-1.5 py-0.5 rounded ${
+                    r.status === "online" ? "text-primary bg-primary/10" :
+                    r.status === "degraded" ? "text-yellow-400 bg-yellow-400/10" :
+                    "text-destructive bg-destructive/10"
+                  }`}>{r.status}</span>
+                </div>
+                <div className="col-span-1"><MiniBar value={r.battery} icon={Battery} /></div>
+                <div className="col-span-1"><MiniBar value={r.cpu} icon={Gauge} inverted /></div>
+                <div className="col-span-1"><MiniBar value={r.net} icon={Wifi} /></div>
+                <div className="col-span-2 text-right font-mono text-[11px] text-muted-foreground">{r.lastSeen}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="panel rounded-lg p-5 flex items-center justify-between">
+            <div>
+              <div className="font-mono text-[10px] uppercase tracking-widest text-primary">jump to video</div>
+              <div className="mt-1 text-sm">Investigate an incident? Search every session in plain English.</div>
+            </div>
+            <button
+              onClick={onJumpToSearch}
+              className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90"
+            >
+              <Search className="h-3.5 w-3.5" />
+              Open search
+            </button>
+          </div>
+        </section>
+
+        <aside className="col-span-12 xl:col-span-4 space-y-4">
+          <SectionHeader eyebrow="alerts" title="Active" hint={`${ALERTS.length} events`} />
+          <div className="panel rounded-lg divide-y divide-border/60">
+            {ALERTS.map((a) => (
+              <div key={a.id} className="p-3.5 flex gap-3">
+                <span className={`mt-1 h-2 w-2 shrink-0 rounded-full ${
+                  a.severity === "critical" ? "bg-destructive" :
+                  a.severity === "warn" ? "bg-yellow-400" : "bg-primary/70"
+                }`} />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 font-mono text-[10px] text-muted-foreground">
+                    <span className="text-primary">{a.robot}</span>
+                    <span>·</span>
+                    <span className="uppercase tracking-widest">{a.severity}</span>
+                    <span className="ml-auto">{a.time}</span>
+                  </div>
+                  <div className="mt-1 text-sm text-foreground/90 leading-snug">{a.message}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </aside>
+      </div>
+    </div>
+  );
+}
+
+function MiniBar({ value, icon: Icon, inverted }: { value: number; icon: typeof Battery; inverted?: boolean }) {
+  const good = inverted ? value < 70 : value > 50;
+  const warn = inverted ? value >= 70 && value < 90 : value <= 50 && value > 20;
+  const color = good ? "bg-primary" : warn ? "bg-yellow-400" : "bg-destructive";
+  return (
+    <div className="flex items-center gap-1.5">
+      <Icon className="h-3 w-3 text-muted-foreground shrink-0" />
+      <div className="flex-1 h-1.5 rounded-full bg-secondary/60 overflow-hidden">
+        <div className={`h-full ${color}`} style={{ width: `${Math.max(3, value)}%` }} />
+      </div>
     </div>
   );
 }
