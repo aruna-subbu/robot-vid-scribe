@@ -414,7 +414,9 @@ function TopBar({ view }: { view: View }) {
         <ChevronRight className="h-3 w-3" />
         <span>workspace</span>
         <ChevronRight className="h-3 w-3" />
-        <span className="text-primary">{view === "pipeline" ? "pipeline" : "library"}</span>
+        <span className="text-primary">
+          {view === "pipeline" ? "pipeline" : view === "observability" ? "observability" : "library"}
+        </span>
       </div>
       <div className="flex items-center gap-2">
         <StatusPill icon={Radio} label="ingest" value="live" />
@@ -448,6 +450,23 @@ function StatusPill({
 }
 
 function Header({ view }: { view: View }) {
+  if (view === "observability") {
+    return (
+      <div className="space-y-3">
+        <div className="flex items-center gap-2 font-mono text-[11px] text-primary">
+          <CircleDot className="h-3 w-3" />
+          <span className="uppercase tracking-[0.2em]">observability · live</span>
+        </div>
+        <h1 className="text-4xl md:text-5xl font-semibold tracking-tight leading-[1.05]">
+          The video DB, <span className="text-primary text-glow">under the hood</span>.
+        </h1>
+        <p className="text-muted-foreground max-w-2xl text-[15px] leading-relaxed">
+          Query latency, embedding throughput, index size and error rate across the SegCLIP
+          semantic layer. Everything you need to run this as production infra for your AI stack.
+        </p>
+      </div>
+    );
+  }
   if (view === "pipeline") {
     return (
       <div className="space-y-3">
