@@ -3,7 +3,6 @@ import { useMemo, useRef, useState } from "react";
 import {
   Activity,
   AlertTriangle,
-  Bot,
   ChevronRight,
   CircleDot,
   Cpu,
@@ -22,9 +21,13 @@ import {
   Video,
   Webhook,
   Zap,
-  Battery,
-  Wifi,
-  Gauge,
+  HardDrive,
+  Waves,
+  Camera,
+  Smartphone,
+  Plane,
+  Car,
+  Cpu as CpuIcon,
 } from "lucide-react";
 
 import thumbGrasp from "@/assets/thumb-grasp.jpg";
@@ -205,63 +208,60 @@ const MATCHES: Match[] = [
 ];
 
 const NAV = [
-  { label: "Observability", icon: Activity, view: "observability" as const },
+  { label: "Pipeline", icon: Activity, view: "pipeline" as const },
   { label: "Library", icon: Video, view: "library" as const, count: 1247 },
   { label: "Ingest", icon: Upload, view: "library" as const },
   { label: "Search", icon: Search, view: "library" as const },
   { label: "Datasets", icon: Layers, view: "library" as const },
-  { label: "Robots", icon: Bot, view: "observability" as const, count: 12 },
+  { label: "Sources", icon: Camera, view: "pipeline" as const, count: 8 },
   { label: "Webhooks", icon: Webhook, view: "library" as const },
   { label: "API keys", icon: Terminal, view: "library" as const },
   { label: "Settings", icon: Settings, view: "library" as const },
 ];
 
-type View = "observability" | "library";
+type View = "pipeline" | "library";
 
-type Robot = {
+type Source = {
   id: string;
   name: string;
-  kind: string;
-  site: string;
-  status: "online" | "degraded" | "offline";
-  battery: number;
-  cpu: number;
-  net: number;
-  uptime: string;
-  lastSeen: string;
-  fps: number;
+  kind: "dashcam" | "drone" | "phone" | "robot" | "upload";
+  origin: string;
+  status: "streaming" | "queued" | "paused";
+  hoursIn: number;   // hours ingested (last 24h)
+  indexLag: string;  // e.g. "0s", "2m"
+  compression: number; // x-ratio
 };
 
-const ROBOTS: Robot[] = [
-  { id: "arm-04",       name: "arm-04",       kind: "Manipulator",     site: "lab-a · cell 3",  status: "online",   battery: 87, cpu: 42, net: 96, uptime: "12d 04h", lastSeen: "just now", fps: 60 },
-  { id: "spot-02",      name: "spot-02",      kind: "Quadruped",       site: "warehouse-w",     status: "online",   battery: 64, cpu: 71, net: 88, uptime: "3d 22h",  lastSeen: "1s ago",   fps: 30 },
-  { id: "amr-11",       name: "amr-11",       kind: "AMR · Indoor",    site: "warehouse-e",     status: "degraded", battery: 41, cpu: 88, net: 62, uptime: "8h 12m",  lastSeen: "2s ago",   fps: 30 },
-  { id: "humanoid-01",  name: "humanoid-01",  kind: "Humanoid",        site: "lab-b",           status: "online",   battery: 92, cpu: 55, net: 99, uptime: "1d 06h",  lastSeen: "just now", fps: 60 },
-  { id: "av-07",        name: "av-07",        kind: "AV · Urban",      site: "downtown-loop",   status: "online",   battery: 78, cpu: 60, net: 91, uptime: "05h 44m", lastSeen: "just now", fps: 30 },
-  { id: "av-09",        name: "av-09",        kind: "AV · Residential",site: "suburb-r2",       status: "offline",  battery: 12, cpu: 0,  net: 0,  uptime: "—",       lastSeen: "14m ago",  fps: 0  },
+const SOURCES: Source[] = [
+  { id: "dashcam-fleet-a", name: "dashcam / fleet-a",   kind: "dashcam", origin: "downtown-loop",  status: "streaming", hoursIn: 42.6, indexLag: "0s",  compression: 19.2 },
+  { id: "drone-survey-3",  name: "drone / survey-3",    kind: "drone",   origin: "site-north",     status: "streaming", hoursIn: 8.1,  indexLag: "1s",  compression: 17.4 },
+  { id: "phone-ops-ios",   name: "phone / ops-ios sdk", kind: "phone",   origin: "field · 24 devs",status: "streaming", hoursIn: 12.9, indexLag: "3s",  compression: 21.0 },
+  { id: "robot-arm-04",    name: "robot / arm-04",      kind: "robot",   origin: "lab-a · cell 3", status: "streaming", hoursIn: 6.3,  indexLag: "0s",  compression: 16.8 },
+  { id: "upload-s3-bulk",  name: "s3 / bulk-archive",   kind: "upload",  origin: "s3://acme-vid",  status: "queued",    hoursIn: 214,  indexLag: "6m",  compression: 18.1 },
+  { id: "webhook-partner", name: "webhook / partner-x", kind: "upload",  origin: "api · rest",     status: "paused",    hoursIn: 0,    indexLag: "—",   compression: 0    },
 ];
 
-type Alert = {
+type Event = {
   id: string;
-  severity: "critical" | "warn" | "info";
-  robot: string;
+  severity: "ok" | "warn" | "info";
+  source: string;
   message: string;
   time: string;
 };
 
-const ALERTS: Alert[] = [
-  { id: "a1", severity: "critical", robot: "av-09",       message: "Heartbeat lost — last frame 14m ago",           time: "14m" },
-  { id: "a2", severity: "warn",     robot: "amr-11",      message: "CPU 88% sustained · downshifting ingest FPS",   time: "3m"  },
-  { id: "a3", severity: "warn",     robot: "amr-11",      message: "Battery 41% · returning to dock in 6m",         time: "1m"  },
-  { id: "a4", severity: "info",     robot: "arm-04",      message: "Policy v3.2 deployed · warmup complete",        time: "22m" },
-  { id: "a5", severity: "info",     robot: "spot-02",     message: "Ingest resumed after WiFi flap",                time: "42m" },
+const EVENTS: Event[] = [
+  { id: "e1", severity: "ok",   source: "dashcam-fleet-a", message: "12,481 segments embedded · segclip-v2",        time: "just now" },
+  { id: "e2", severity: "info", source: "upload-s3-bulk",  message: "Batch reindex started · 4,200 clips queued",   time: "2m" },
+  { id: "e3", severity: "warn", source: "webhook-partner", message: "Ingest paused · awaiting API key rotation",    time: "8m" },
+  { id: "e4", severity: "ok",   source: "phone-ops-ios",   message: "SDK v0.4.1 rolled out · compression +6%",      time: "34m" },
+  { id: "e5", severity: "info", source: "drone-survey-3",  message: "New concept 'aerial-inspection' auto-clustered", time: "1h" },
 ];
 
 function Index() {
   const [query, setQuery] = useState("");
   const [listening, setListening] = useState(false);
   const [selected, setSelected] = useState<string | null>("clip_01H8Z9");
-  const [view, setView] = useState<View>("observability");
+  const [view, setView] = useState<View>("pipeline");
   const inputRef = useRef<HTMLInputElement>(null);
 
   const activeClip = useMemo(
@@ -279,8 +279,8 @@ function Index() {
           <TopBar view={view} />
           <div className="mx-auto max-w-[1400px] px-8 py-8 space-y-8">
             <Header view={view} />
-            {view === "observability" ? (
-              <ObservabilityView onJumpToSearch={() => setView("library")} />
+            {view === "pipeline" ? (
+              <PipelineView onJumpToSearch={() => setView("library")} />
             ) : (
               <>
             <SearchBar
