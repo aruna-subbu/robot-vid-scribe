@@ -447,14 +447,14 @@ function Header({ view }: { view: View }) {
       <div className="space-y-3">
         <div className="flex items-center gap-2 font-mono text-[11px] text-primary">
           <CircleDot className="h-3 w-3" />
-          <span className="uppercase tracking-[0.2em]">fleet ops · live</span>
+          <span className="uppercase tracking-[0.2em]">observability · live</span>
         </div>
         <h1 className="text-4xl md:text-5xl font-semibold tracking-tight leading-[1.05]">
-          Your fleet, <span className="text-primary text-glow">one glance</span>.
+          Every stream, <span className="text-primary text-glow">one glance</span>.
         </h1>
         <p className="text-muted-foreground max-w-2xl text-[15px] leading-relaxed">
-          Live telemetry, alerts and session capture across every robot — then jump straight to
-          the video with natural-language search.
+          Health, ingest rate and index lag across every source feeding the video DB —
+          robots, dashcams, drones, phones. Jump straight to the frame with natural-language search.
         </p>
       </div>
     );
@@ -463,16 +463,23 @@ function Header({ view }: { view: View }) {
     <div className="space-y-3">
       <div className="flex items-center gap-2 font-mono text-[11px] text-primary">
         <CircleDot className="h-3 w-3" />
-        <span className="uppercase tracking-[0.2em]">video ops · v0.4</span>
+        <span className="uppercase tracking-[0.2em]">segclip video db · v0.4</span>
       </div>
       <h1 className="text-4xl md:text-5xl font-semibold tracking-tight leading-[1.05]">
-        Every robot session,{" "}
-        <span className="text-primary text-glow">searchable by meaning</span>.
+        Upload any video.{" "}
+        <span className="text-primary text-glow">Search by what happens</span>.
       </h1>
       <p className="text-muted-foreground max-w-2xl text-[15px] leading-relaxed">
-        Push footage from any robot over REST or S3-compatible storage. Ask for what happened in plain
-        English — or by voice — and jump to the exact frame.
+        SegCLIP segments and embeds every clip on ingest — no tagging, no labels, no schema. Videos
+        land compressed, activities become searchable in plain English. Built for AI startups with
+        rooms of video and nowhere to put it.
       </p>
+      <div className="flex flex-wrap items-center gap-2 pt-1 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+        <span className="px-2 py-1 rounded border border-border">no tagging required</span>
+        <span className="px-2 py-1 rounded border border-border">18× compressed storage</span>
+        <span className="px-2 py-1 rounded border border-border">segclip semantic index</span>
+        <span className="px-2 py-1 rounded border border-border">rest · s3 · sdk</span>
+      </div>
     </div>
   );
 }
