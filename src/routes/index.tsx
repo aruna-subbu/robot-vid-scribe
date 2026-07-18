@@ -215,7 +215,7 @@ const NAV = [
   { label: "Pipeline",      icon: Activity, view: "pipeline" as const },
   { label: "Library", icon: Video, view: "library" as const, count: 1247 },
   { label: "Ingest", icon: Upload, view: "library" as const },
-  { label: "Search", icon: Search, view: "library" as const },
+  { label: "Search", icon: Search, view: "search" as const },
   { label: "Datasets", icon: Layers, view: "library" as const },
   { label: "Sources", icon: Camera, view: "pipeline" as const, count: 8 },
   { label: "Webhooks", icon: Webhook, view: "library" as const },
@@ -223,7 +223,7 @@ const NAV = [
   { label: "Settings", icon: Settings, view: "library" as const },
 ];
 
-type View = "observability" | "pipeline" | "library";
+type View = "observability" | "pipeline" | "library" | "search";
 
 type Source = {
   id: string;
