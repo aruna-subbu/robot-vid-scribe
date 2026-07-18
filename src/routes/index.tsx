@@ -493,6 +493,24 @@ function Header({ view }: { view: View }) {
       </div>
     );
   }
+  if (view === "search") {
+    return (
+      <div className="space-y-3">
+        <div className="flex items-center gap-2 font-mono text-[11px] text-primary">
+          <CircleDot className="h-3 w-3" />
+          <span className="uppercase tracking-[0.2em]">semantic search · segclip-v2</span>
+        </div>
+        <h1 className="text-4xl md:text-5xl font-semibold tracking-tight leading-[1.05]">
+          Ask in plain English.{" "}
+          <span className="text-primary text-glow">Get related videos back</span>.
+        </h1>
+        <p className="text-muted-foreground max-w-2xl text-[15px] leading-relaxed">
+          Natural language and voice search across every ingested clip. No tags, no filenames —
+          SegCLIP embeddings match on what actually happens in the frame.
+        </p>
+      </div>
+    );
+  }
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2 font-mono text-[11px] text-primary">
