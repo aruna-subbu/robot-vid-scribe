@@ -404,18 +404,19 @@ function TopBar({ view }: { view: View }) {
   return (
     <div className="h-16 border-b border-border flex items-center justify-between px-6 lg:px-8 bg-background/40 backdrop-blur">
       <div className="flex items-center gap-3 font-mono text-[11px] text-muted-foreground">
-        <span className="text-foreground">workspace</span>
+        <span className="text-foreground">segclip.db</span>
         <ChevronRight className="h-3 w-3" />
-        <span>robotics-lab</span>
+        <span>workspace</span>
         <ChevronRight className="h-3 w-3" />
         <span className="text-primary">{view === "observability" ? "observability" : "library"}</span>
       </div>
       <div className="flex items-center gap-2">
         <StatusPill icon={Radio} label="ingest" value="live" />
-        <StatusPill icon={Activity} label="index" value="2 pending" />
+        <StatusPill icon={Cpu} label="segclip" value="v2 · 512d" />
+        <StatusPill icon={Database} label="compressed" value="18× · h265" />
         <button className="ml-2 inline-flex items-center gap-1.5 h-8 px-3 rounded-md bg-primary text-primary-foreground text-xs font-medium hover:opacity-90 transition-opacity">
           <Plus className="h-3.5 w-3.5" />
-          New capture
+          Upload video
         </button>
       </div>
     </div>
@@ -446,14 +447,14 @@ function Header({ view }: { view: View }) {
       <div className="space-y-3">
         <div className="flex items-center gap-2 font-mono text-[11px] text-primary">
           <CircleDot className="h-3 w-3" />
-          <span className="uppercase tracking-[0.2em]">fleet ops · live</span>
+          <span className="uppercase tracking-[0.2em]">observability · live</span>
         </div>
         <h1 className="text-4xl md:text-5xl font-semibold tracking-tight leading-[1.05]">
-          Your fleet, <span className="text-primary text-glow">one glance</span>.
+          Every stream, <span className="text-primary text-glow">one glance</span>.
         </h1>
         <p className="text-muted-foreground max-w-2xl text-[15px] leading-relaxed">
-          Live telemetry, alerts and session capture across every robot — then jump straight to
-          the video with natural-language search.
+          Health, ingest rate and index lag across every source feeding the video DB —
+          robots, dashcams, drones, phones. Jump straight to the frame with natural-language search.
         </p>
       </div>
     );
@@ -462,16 +463,23 @@ function Header({ view }: { view: View }) {
     <div className="space-y-3">
       <div className="flex items-center gap-2 font-mono text-[11px] text-primary">
         <CircleDot className="h-3 w-3" />
-        <span className="uppercase tracking-[0.2em]">video ops · v0.4</span>
+        <span className="uppercase tracking-[0.2em]">segclip video db · v0.4</span>
       </div>
       <h1 className="text-4xl md:text-5xl font-semibold tracking-tight leading-[1.05]">
-        Every robot session,{" "}
-        <span className="text-primary text-glow">searchable by meaning</span>.
+        Upload any video.{" "}
+        <span className="text-primary text-glow">Search by what happens</span>.
       </h1>
       <p className="text-muted-foreground max-w-2xl text-[15px] leading-relaxed">
-        Push footage from any robot over REST or S3-compatible storage. Ask for what happened in plain
-        English — or by voice — and jump to the exact frame.
+        SegCLIP segments and embeds every clip on ingest — no tagging, no labels, no schema. Videos
+        land compressed, activities become searchable in plain English. Built for AI startups with
+        rooms of video and nowhere to put it.
       </p>
+      <div className="flex flex-wrap items-center gap-2 pt-1 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+        <span className="px-2 py-1 rounded border border-border">no tagging required</span>
+        <span className="px-2 py-1 rounded border border-border">18× compressed storage</span>
+        <span className="px-2 py-1 rounded border border-border">segclip semantic index</span>
+        <span className="px-2 py-1 rounded border border-border">rest · s3 · sdk</span>
+      </div>
     </div>
   );
 }
@@ -709,7 +717,7 @@ function ResultsPanel({ query }: { query: string }) {
           </h2>
         </div>
         <div className="font-mono text-[11px] text-muted-foreground">
-          model: <span className="text-foreground">video-clip-v2</span> · top-k 3
+          model: <span className="text-foreground">segclip-v2</span> · 512d · top-k 3
         </div>
       </div>
       <div className="space-y-3">
@@ -778,10 +786,10 @@ function ResultsPanel({ query }: { query: string }) {
 
 function StatsRow() {
   const stats = [
-    { label: "clips indexed", value: "1,247", delta: "+38 today", icon: Video },
-    { label: "hours of footage", value: "412h", delta: "+2.1h today", icon: Database },
-    { label: "avg query latency", value: "47ms", delta: "p95 · 112ms", icon: Zap },
-    { label: "active robots", value: "12", delta: "3 streaming now", icon: Bot },
+    { label: "videos indexed",    value: "1,247", delta: "+38 today · no tagging",  icon: Video },
+    { label: "hours ingested",    value: "412h",  delta: "3.4 TB → 190 GB stored",  icon: Database },
+    { label: "avg query latency", value: "47ms",  delta: "p95 · 112ms",             icon: Zap },
+    { label: "compression ratio", value: "18×",   delta: "h265 + segclip embeds",   icon: Cpu },
   ];
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
