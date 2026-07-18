@@ -847,6 +847,157 @@ function PipelineView({ onJumpToSearch }: { onJumpToSearch: () => void }) {
 
 /* ------------------------------ Search ------------------------------ */
 
+function SearchView() {
+  const [q, setQ] = useState("");
+  const [listening, setListening] = useState(false);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
+  const suggestions = [
+    "kids crossing at a green light",
+    "child jaywalking mid-block",
+    "child on a bike crossing the lane",
+    "gripper slipped during bin pick",
+    "quadruped avoiding an obstacle",
+    "bimanual regrasp after slip",
+  ];
+
+  const query = q.trim().toLowerCase();
+  const tokens = query.split(/\s+/).filter(Boolean);
+
+  const scored = CLIPS.map((c) => {
+    const match = MATCHES.find((m) => m.clipId === c.id);
+    const haystack = [
+      c.title,
+      c.robot,
+      c.session,
+      c.tags.join(" "),
+      match?.snippet ?? "",
+    ]
+      .join(" ")
+      .toLowerCase();
+    let hits = 0;
+    for (const t of tokens) if (haystack.includes(t)) hits++;
+    // semantic-ish base score from MATCHES, boosted by keyword hits
+    const base = match?.score ?? 0.72;
+    const score = tokens.length === 0 ? base : Math.min(0.99, base * 0.6 + (hits / tokens.length) * 0.4);
+    return { clip: c, match, hits, score };
+  })
+    .filter((r) => (tokens.length === 0 ? true : r.hits > 0))
+    .sort((a, b) => b.score - a.score);
+
+  const results = scored.length > 0 ? scored : CLIPS.map((c) => ({ clip: c, match: MATCHES.find((m) => m.clipId === c.id), hits: 0, score: 0.5 }));
+
+  return (
+    <div className="space-y-6">
+      <SearchBar
+        value={q}
+        onChange={setQ}
+        listening={listening}
+        onToggleListen={() => {
+          setListening((v) => !v);
+          inputRef.current?.focus();
+        }}
+        inputRef={inputRef}
+      />
+
+      <div className="flex items-baseline justify-between">
+        <div>
+          <div className="font-mono text-[10px] uppercase tracking-widest text-primary">
+            {query ? "semantic results · 47ms" : "showing all indexed clips"}
+          </div>
+          <h2 className="mt-1 text-xl font-semibold">
+            {results.length} related video{results.length === 1 ? "" : "s"}
+            {query && (
+              <>
+                {" "}
+                <span className="text-muted-foreground font-normal">for</span>{" "}
+                <span className="text-primary">"{q}"</span>
+              </>
+            )}
+          </h2>
+        </div>
+        <div className="font-mono text-[11px] text-muted-foreground">
+          model: <span className="text-foreground">segclip-v2</span> · 512d · cosine
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        {results.map(({ clip, match, score }) => (
+          <div
+            key={clip.id}
+            className="panel rounded-lg overflow-hidden hover:border-primary/40 transition-colors group"
+          >
+            <div className="relative aspect-video bg-muted">
+              <ClipMedia clip={clip} />
+              <div className="absolute inset-0 bg-gradient-to-t from-background/85 via-background/10 to-transparent" />
+              <div className="absolute top-2 left-2 font-mono text-[10px] px-1.5 py-0.5 rounded bg-background/80 text-primary">
+                {clip.duration}
+              </div>
+              <div className="absolute top-2 right-2 font-mono text-[10px] px-1.5 py-0.5 rounded bg-primary/20 border border-primary/40 text-primary text-glow">
+                {score.toFixed(2)}
+              </div>
+              {match && (
+                <div className="absolute bottom-2 left-2 font-mono text-[10px] px-1.5 py-0.5 rounded bg-background/80 text-primary">
+                  ▸ {match.timestamp}
+                </div>
+              )}
+              <button className="absolute inset-0 grid place-items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <span className="h-11 w-11 rounded-full bg-primary text-primary-foreground grid place-items-center">
+                  <Play className="h-4 w-4 fill-current" />
+                </span>
+              </button>
+            </div>
+            <div className="p-3 space-y-2">
+              <div className="flex items-center gap-2 font-mono text-[10px] text-muted-foreground">
+                <span className="text-primary">{clip.id}</span>
+                <span>·</span>
+                <span>{clip.robot}</span>
+              </div>
+              <div className="text-sm font-medium leading-snug">{clip.title}</div>
+              {match && (
+                <div className="text-xs text-muted-foreground leading-relaxed line-clamp-2">
+                  {match.snippet}
+                </div>
+              )}
+              <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                {clip.tags.slice(0, 3).map((t) => (
+                  <span
+                    key={t}
+                    className="font-mono text-[10px] px-1.5 py-0.5 rounded border border-border text-muted-foreground"
+                  >
+                    #{t}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {query && scored.length === 0 && (
+        <div className="panel rounded-lg p-6 text-center text-sm text-muted-foreground">
+          No direct matches — showing the closest clips by embedding similarity.
+        </div>
+      )}
+
+      <div className="flex flex-wrap items-center gap-2 pt-2">
+        <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+          try
+        </span>
+        {suggestions.map((s) => (
+          <button
+            key={s}
+            onClick={() => setQ(s)}
+            className="px-2.5 py-1 rounded-full border border-border bg-card/40 text-xs text-muted-foreground hover:text-primary hover:border-primary/40 transition-colors"
+          >
+            {s}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function SearchBar({
   value,
   onChange,
