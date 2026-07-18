@@ -2,7 +2,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useRef, useState } from "react";
 import {
   Activity,
-  AlertTriangle,
   ChevronRight,
   CircleDot,
   Cpu,
