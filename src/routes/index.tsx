@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useRef, useState } from "react";
 import {
   Activity,
+  AlertTriangle,
   Bot,
   ChevronRight,
   CircleDot,
@@ -21,6 +22,9 @@ import {
   Video,
   Webhook,
   Zap,
+  Battery,
+  Wifi,
+  Gauge,
 } from "lucide-react";
 
 import thumbGrasp from "@/assets/thumb-grasp.jpg";
@@ -201,20 +205,63 @@ const MATCHES: Match[] = [
 ];
 
 const NAV = [
-  { label: "Library", icon: Video, active: true, count: 1247 },
-  { label: "Ingest", icon: Upload },
-  { label: "Search", icon: Search },
-  { label: "Datasets", icon: Layers },
-  { label: "Robots", icon: Bot, count: 12 },
-  { label: "Webhooks", icon: Webhook },
-  { label: "API keys", icon: Terminal },
-  { label: "Settings", icon: Settings },
+  { label: "Observability", icon: Activity, view: "observability" as const },
+  { label: "Library", icon: Video, view: "library" as const, count: 1247 },
+  { label: "Ingest", icon: Upload, view: "library" as const },
+  { label: "Search", icon: Search, view: "library" as const },
+  { label: "Datasets", icon: Layers, view: "library" as const },
+  { label: "Robots", icon: Bot, view: "observability" as const, count: 12 },
+  { label: "Webhooks", icon: Webhook, view: "library" as const },
+  { label: "API keys", icon: Terminal, view: "library" as const },
+  { label: "Settings", icon: Settings, view: "library" as const },
+];
+
+type View = "observability" | "library";
+
+type Robot = {
+  id: string;
+  name: string;
+  kind: string;
+  site: string;
+  status: "online" | "degraded" | "offline";
+  battery: number;
+  cpu: number;
+  net: number;
+  uptime: string;
+  lastSeen: string;
+  fps: number;
+};
+
+const ROBOTS: Robot[] = [
+  { id: "arm-04",       name: "arm-04",       kind: "Manipulator",     site: "lab-a · cell 3",  status: "online",   battery: 87, cpu: 42, net: 96, uptime: "12d 04h", lastSeen: "just now", fps: 60 },
+  { id: "spot-02",      name: "spot-02",      kind: "Quadruped",       site: "warehouse-w",     status: "online",   battery: 64, cpu: 71, net: 88, uptime: "3d 22h",  lastSeen: "1s ago",   fps: 30 },
+  { id: "amr-11",       name: "amr-11",       kind: "AMR · Indoor",    site: "warehouse-e",     status: "degraded", battery: 41, cpu: 88, net: 62, uptime: "8h 12m",  lastSeen: "2s ago",   fps: 30 },
+  { id: "humanoid-01",  name: "humanoid-01",  kind: "Humanoid",        site: "lab-b",           status: "online",   battery: 92, cpu: 55, net: 99, uptime: "1d 06h",  lastSeen: "just now", fps: 60 },
+  { id: "av-07",        name: "av-07",        kind: "AV · Urban",      site: "downtown-loop",   status: "online",   battery: 78, cpu: 60, net: 91, uptime: "05h 44m", lastSeen: "just now", fps: 30 },
+  { id: "av-09",        name: "av-09",        kind: "AV · Residential",site: "suburb-r2",       status: "offline",  battery: 12, cpu: 0,  net: 0,  uptime: "—",       lastSeen: "14m ago",  fps: 0  },
+];
+
+type Alert = {
+  id: string;
+  severity: "critical" | "warn" | "info";
+  robot: string;
+  message: string;
+  time: string;
+};
+
+const ALERTS: Alert[] = [
+  { id: "a1", severity: "critical", robot: "av-09",       message: "Heartbeat lost — last frame 14m ago",           time: "14m" },
+  { id: "a2", severity: "warn",     robot: "amr-11",      message: "CPU 88% sustained · downshifting ingest FPS",   time: "3m"  },
+  { id: "a3", severity: "warn",     robot: "amr-11",      message: "Battery 41% · returning to dock in 6m",         time: "1m"  },
+  { id: "a4", severity: "info",     robot: "arm-04",      message: "Policy v3.2 deployed · warmup complete",        time: "22m" },
+  { id: "a5", severity: "info",     robot: "spot-02",     message: "Ingest resumed after WiFi flap",                time: "42m" },
 ];
 
 function Index() {
   const [query, setQuery] = useState("");
   const [listening, setListening] = useState(false);
   const [selected, setSelected] = useState<string | null>("clip_01H8Z9");
+  const [view, setView] = useState<View>("observability");
   const inputRef = useRef<HTMLInputElement>(null);
 
   const activeClip = useMemo(
@@ -227,11 +274,15 @@ function Index() {
   return (
     <div className="min-h-screen text-foreground">
       <div className="flex min-h-screen">
-        <Sidebar />
+        <Sidebar view={view} onChange={setView} />
         <main className="flex-1 min-w-0">
-          <TopBar />
+          <TopBar view={view} />
           <div className="mx-auto max-w-[1400px] px-8 py-8 space-y-8">
-            <Header />
+            <Header view={view} />
+            {view === "observability" ? (
+              <ObservabilityView onJumpToSearch={() => setView("library")} />
+            ) : (
+              <>
             <SearchBar
               value={query}
               onChange={setQuery}
@@ -274,6 +325,8 @@ function Index() {
                 </div>
               </>
             )}
+              </>
+            )}
           </div>
         </main>
       </div>
@@ -283,7 +336,7 @@ function Index() {
 
 /* ------------------------------ Layout parts ------------------------------ */
 
-function Sidebar() {
+function Sidebar({ view, onChange }: { view: View; onChange: (v: View) => void }) {
   return (
     <aside className="hidden lg:flex w-64 shrink-0 flex-col border-r border-border bg-sidebar/70 backdrop-blur">
       <div className="h-16 flex items-center gap-2.5 px-5 border-b border-border">
@@ -299,24 +352,28 @@ function Sidebar() {
         <div className="px-2 pt-2 pb-1 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
           workspace
         </div>
-        {NAV.map((item) => (
-          <button
-            key={item.label}
-            className={`w-full group flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-sm transition-colors ${
-              item.active
-                ? "bg-primary/10 text-primary"
-                : "text-muted-foreground hover:text-foreground hover:bg-secondary/60"
-            }`}
-          >
-            <item.icon className="h-4 w-4" />
-            <span>{item.label}</span>
-            {item.count && (
-              <span className="ml-auto font-mono text-[10px] text-muted-foreground group-hover:text-foreground">
-                {item.count.toLocaleString()}
-              </span>
-            )}
-          </button>
-        ))}
+        {NAV.map((item) => {
+          const active = item.view === view;
+          return (
+            <button
+              key={item.label}
+              onClick={() => onChange(item.view)}
+              className={`w-full group flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-sm transition-colors ${
+                active
+                  ? "bg-primary/10 text-primary"
+                  : "text-muted-foreground hover:text-foreground hover:bg-secondary/60"
+              }`}
+            >
+              <item.icon className="h-4 w-4" />
+              <span>{item.label}</span>
+              {item.count && (
+                <span className="ml-auto font-mono text-[10px] text-muted-foreground group-hover:text-foreground">
+                  {item.count.toLocaleString()}
+                </span>
+              )}
+            </button>
+          );
+        })}
       </nav>
       <div className="p-3 border-t border-border">
         <div className="panel rounded-md p-3 space-y-2">
@@ -343,7 +400,7 @@ function Sidebar() {
   );
 }
 
-function TopBar() {
+function TopBar({ view }: { view: View }) {
   return (
     <div className="h-16 border-b border-border flex items-center justify-between px-6 lg:px-8 bg-background/40 backdrop-blur">
       <div className="flex items-center gap-3 font-mono text-[11px] text-muted-foreground">
@@ -351,7 +408,7 @@ function TopBar() {
         <ChevronRight className="h-3 w-3" />
         <span>robotics-lab</span>
         <ChevronRight className="h-3 w-3" />
-        <span className="text-primary">library</span>
+        <span className="text-primary">{view === "observability" ? "observability" : "library"}</span>
       </div>
       <div className="flex items-center gap-2">
         <StatusPill icon={Radio} label="ingest" value="live" />
@@ -383,7 +440,24 @@ function StatusPill({
   );
 }
 
-function Header() {
+function Header({ view }: { view: View }) {
+  if (view === "observability") {
+    return (
+      <div className="space-y-3">
+        <div className="flex items-center gap-2 font-mono text-[11px] text-primary">
+          <CircleDot className="h-3 w-3" />
+          <span className="uppercase tracking-[0.2em]">fleet ops · live</span>
+        </div>
+        <h1 className="text-4xl md:text-5xl font-semibold tracking-tight leading-[1.05]">
+          Your fleet, <span className="text-primary text-glow">one glance</span>.
+        </h1>
+        <p className="text-muted-foreground max-w-2xl text-[15px] leading-relaxed">
+          Live telemetry, alerts and session capture across every robot — then jump straight to
+          the video with natural-language search.
+        </p>
+      </div>
+    );
+  }
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2 font-mono text-[11px] text-primary">
@@ -398,6 +472,138 @@ function Header() {
         Push footage from any robot over REST or S3-compatible storage. Ask for what happened in plain
         English — or by voice — and jump to the exact frame.
       </p>
+    </div>
+  );
+}
+
+/* ------------------------------ Observability ------------------------------ */
+
+function ObservabilityView({ onJumpToSearch }: { onJumpToSearch: () => void }) {
+  const online = ROBOTS.filter((r) => r.status === "online").length;
+  const degraded = ROBOTS.filter((r) => r.status === "degraded").length;
+  const offline = ROBOTS.filter((r) => r.status === "offline").length;
+  const streaming = ROBOTS.filter((r) => r.fps > 0).length;
+
+  const stats = [
+    { label: "robots online",   value: `${online}/${ROBOTS.length}`, delta: `${degraded} degraded · ${offline} offline`, icon: Bot },
+    { label: "streaming now",   value: `${streaming}`,               delta: "ingest live",                                 icon: Radio },
+    { label: "avg cpu",         value: `${Math.round(ROBOTS.filter(r => r.status !== "offline").reduce((a,r) => a+r.cpu, 0) / Math.max(1, ROBOTS.filter(r=>r.status!=="offline").length))}%`, delta: "60s window", icon: Cpu },
+    { label: "open alerts",     value: `${ALERTS.length}`,           delta: `${ALERTS.filter(a=>a.severity==="critical").length} critical`, icon: AlertTriangle },
+  ];
+
+  return (
+    <div className="space-y-8">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {stats.map((s) => (
+          <div key={s.label} className="panel rounded-lg p-4">
+            <div className="flex items-center justify-between">
+              <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                {s.label}
+              </span>
+              <s.icon className="h-3.5 w-3.5 text-primary" />
+            </div>
+            <div className="mt-2 font-mono text-2xl font-semibold tracking-tight">{s.value}</div>
+            <div className="mt-1 font-mono text-[11px] text-muted-foreground">{s.delta}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-12 gap-6">
+        <section className="col-span-12 xl:col-span-8 space-y-4">
+          <SectionHeader eyebrow="fleet" title="Robots" hint={`${ROBOTS.length} devices · updated live`} />
+          <div className="panel rounded-lg overflow-hidden">
+            <div className="grid grid-cols-12 gap-2 px-4 py-2.5 font-mono text-[10px] uppercase tracking-widest text-muted-foreground border-b border-border">
+              <div className="col-span-3">robot</div>
+              <div className="col-span-2">site</div>
+              <div className="col-span-2">status</div>
+              <div className="col-span-1">batt</div>
+              <div className="col-span-1">cpu</div>
+              <div className="col-span-1">net</div>
+              <div className="col-span-2 text-right">last seen</div>
+            </div>
+            {ROBOTS.map((r) => (
+              <div
+                key={r.id}
+                className="grid grid-cols-12 gap-2 px-4 py-3 items-center border-b border-border/60 last:border-b-0 hover:bg-secondary/30 transition-colors"
+              >
+                <div className="col-span-3 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className={`h-2 w-2 rounded-full ${
+                      r.status === "online" ? "bg-primary" :
+                      r.status === "degraded" ? "bg-yellow-400" : "bg-destructive"
+                    }`} />
+                    <span className="font-mono text-sm text-foreground truncate">{r.name}</span>
+                  </div>
+                  <div className="font-mono text-[10px] text-muted-foreground pl-4">{r.kind}</div>
+                </div>
+                <div className="col-span-2 font-mono text-[11px] text-muted-foreground truncate">{r.site}</div>
+                <div className="col-span-2">
+                  <span className={`font-mono text-[10px] uppercase tracking-widest px-1.5 py-0.5 rounded ${
+                    r.status === "online" ? "text-primary bg-primary/10" :
+                    r.status === "degraded" ? "text-yellow-400 bg-yellow-400/10" :
+                    "text-destructive bg-destructive/10"
+                  }`}>{r.status}</span>
+                </div>
+                <div className="col-span-1"><MiniBar value={r.battery} icon={Battery} /></div>
+                <div className="col-span-1"><MiniBar value={r.cpu} icon={Gauge} inverted /></div>
+                <div className="col-span-1"><MiniBar value={r.net} icon={Wifi} /></div>
+                <div className="col-span-2 text-right font-mono text-[11px] text-muted-foreground">{r.lastSeen}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="panel rounded-lg p-5 flex items-center justify-between">
+            <div>
+              <div className="font-mono text-[10px] uppercase tracking-widest text-primary">jump to video</div>
+              <div className="mt-1 text-sm">Investigate an incident? Search every session in plain English.</div>
+            </div>
+            <button
+              onClick={onJumpToSearch}
+              className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90"
+            >
+              <Search className="h-3.5 w-3.5" />
+              Open search
+            </button>
+          </div>
+        </section>
+
+        <aside className="col-span-12 xl:col-span-4 space-y-4">
+          <SectionHeader eyebrow="alerts" title="Active" hint={`${ALERTS.length} events`} />
+          <div className="panel rounded-lg divide-y divide-border/60">
+            {ALERTS.map((a) => (
+              <div key={a.id} className="p-3.5 flex gap-3">
+                <span className={`mt-1 h-2 w-2 shrink-0 rounded-full ${
+                  a.severity === "critical" ? "bg-destructive" :
+                  a.severity === "warn" ? "bg-yellow-400" : "bg-primary/70"
+                }`} />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 font-mono text-[10px] text-muted-foreground">
+                    <span className="text-primary">{a.robot}</span>
+                    <span>·</span>
+                    <span className="uppercase tracking-widest">{a.severity}</span>
+                    <span className="ml-auto">{a.time}</span>
+                  </div>
+                  <div className="mt-1 text-sm text-foreground/90 leading-snug">{a.message}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </aside>
+      </div>
+    </div>
+  );
+}
+
+function MiniBar({ value, icon: Icon, inverted }: { value: number; icon: typeof Battery; inverted?: boolean }) {
+  const good = inverted ? value < 70 : value > 50;
+  const warn = inverted ? value >= 70 && value < 90 : value <= 50 && value > 20;
+  const color = good ? "bg-primary" : warn ? "bg-yellow-400" : "bg-destructive";
+  return (
+    <div className="flex items-center gap-1.5">
+      <Icon className="h-3 w-3 text-muted-foreground shrink-0" />
+      <div className="flex-1 h-1.5 rounded-full bg-secondary/60 overflow-hidden">
+        <div className={`h-full ${color}`} style={{ width: `${Math.max(3, value)}%` }} />
+      </div>
     </div>
   );
 }
