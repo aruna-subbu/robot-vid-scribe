@@ -284,9 +284,11 @@ function Index() {
           <div className="mx-auto max-w-[1400px] px-8 py-8 space-y-8">
             <Header view={view} />
             {view === "observability" ? (
-              <ObservabilityView onJumpToSearch={() => setView("library")} />
+              <ObservabilityView onJumpToSearch={() => setView("search")} />
             ) : view === "pipeline" ? (
-              <PipelineView onJumpToSearch={() => setView("library")} />
+              <PipelineView onJumpToSearch={() => setView("search")} />
+            ) : view === "search" ? (
+              <SearchView />
             ) : (
               <>
             <SearchBar
