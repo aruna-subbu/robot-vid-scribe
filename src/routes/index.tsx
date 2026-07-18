@@ -27,6 +27,10 @@ import {
   Plane,
   Car,
   Cpu as CpuIcon,
+  Gauge,
+  Timer,
+  AlertTriangle,
+  TrendingUp,
 } from "lucide-react";
 
 import thumbGrasp from "@/assets/thumb-grasp.jpg";
@@ -207,7 +211,8 @@ const MATCHES: Match[] = [
 ];
 
 const NAV = [
-  { label: "Pipeline", icon: Activity, view: "pipeline" as const },
+  { label: "Observability", icon: Gauge,    view: "observability" as const },
+  { label: "Pipeline",      icon: Activity, view: "pipeline" as const },
   { label: "Library", icon: Video, view: "library" as const, count: 1247 },
   { label: "Ingest", icon: Upload, view: "library" as const },
   { label: "Search", icon: Search, view: "library" as const },
@@ -218,7 +223,7 @@ const NAV = [
   { label: "Settings", icon: Settings, view: "library" as const },
 ];
 
-type View = "pipeline" | "library";
+type View = "observability" | "pipeline" | "library";
 
 type Source = {
   id: string;
@@ -260,7 +265,7 @@ function Index() {
   const [query, setQuery] = useState("");
   const [listening, setListening] = useState(false);
   const [selected, setSelected] = useState<string | null>("clip_01H8Z9");
-  const [view, setView] = useState<View>("pipeline");
+  const [view, setView] = useState<View>("observability");
   const inputRef = useRef<HTMLInputElement>(null);
 
   const activeClip = useMemo(
@@ -278,7 +283,9 @@ function Index() {
           <TopBar view={view} />
           <div className="mx-auto max-w-[1400px] px-8 py-8 space-y-8">
             <Header view={view} />
-            {view === "pipeline" ? (
+            {view === "observability" ? (
+              <ObservabilityView onJumpToSearch={() => setView("library")} />
+            ) : view === "pipeline" ? (
               <PipelineView onJumpToSearch={() => setView("library")} />
             ) : (
               <>
