@@ -417,7 +417,13 @@ function TopBar({ view }: { view: View }) {
         <span>workspace</span>
         <ChevronRight className="h-3 w-3" />
         <span className="text-primary">
-          {view === "pipeline" ? "pipeline" : view === "observability" ? "observability" : "library"}
+          {view === "pipeline"
+            ? "pipeline"
+            : view === "observability"
+            ? "observability"
+            : view === "search"
+            ? "search"
+            : "library"}
         </span>
       </div>
       <div className="flex items-center gap-2">
