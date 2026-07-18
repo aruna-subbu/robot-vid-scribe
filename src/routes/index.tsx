@@ -686,6 +686,9 @@ function ClipCard({
 }
 
 function StatusDot({ status }: { status: Clip["status"] }) {
+  return _StatusDot({ status });
+}
+function _StatusDot({ status }: { status: Clip["status"] }) {
   const color =
     status === "indexed"
       ? "bg-primary"
