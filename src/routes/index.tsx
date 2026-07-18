@@ -27,6 +27,9 @@ import thumbGrasp from "@/assets/thumb-grasp.jpg";
 import thumbQuadruped from "@/assets/thumb-quadruped.jpg";
 import thumbNav from "@/assets/thumb-nav.jpg";
 import thumbHumanoid from "@/assets/thumb-humanoid.jpg";
+import thumbCrosswalk from "@/assets/thumb-crosswalk.jpg";
+import thumbJaywalk from "@/assets/thumb-jaywalk.jpg";
+import thumbBiking from "@/assets/thumb-biking.jpg";
 
 export const Route = createFileRoute("/")({
   component: Index,
@@ -99,6 +102,45 @@ const CLIPS: Clip[] = [
     thumb: thumbHumanoid,
     status: "indexed",
   },
+  {
+    id: "clip_01H8V7",
+    title: "Kids crossing at signalized intersection",
+    robot: "av-07",
+    session: "sess_2027",
+    duration: "05:18",
+    fps: 30,
+    size: "1.4 GB",
+    captured: "3d ago",
+    tags: ["pedestrian", "crosswalk", "urban", "vru"],
+    thumb: thumbCrosswalk,
+    status: "indexed",
+  },
+  {
+    id: "clip_01H8U3",
+    title: "Children jaywalking — mid-block, suburban",
+    robot: "av-07",
+    session: "sess_2024",
+    duration: "02:52",
+    fps: 30,
+    size: "812 MB",
+    captured: "3d ago",
+    tags: ["pedestrian", "jaywalk", "vru", "edge-case"],
+    thumb: thumbJaywalk,
+    status: "indexed",
+  },
+  {
+    id: "clip_01H8T1",
+    title: "Child cyclist crossing lane — residential",
+    robot: "av-09",
+    session: "sess_2019",
+    duration: "04:06",
+    fps: 30,
+    size: "1.1 GB",
+    captured: "4d ago",
+    tags: ["cyclist", "vru", "residential", "yield"],
+    thumb: thumbBiking,
+    status: "embedding",
+  },
 ];
 
 type Match = {
@@ -109,6 +151,24 @@ type Match = {
 };
 
 const MATCHES: Match[] = [
+  {
+    clipId: "clip_01H8V7",
+    timestamp: "01:23",
+    score: 0.96,
+    snippet: "Four children step off curb into crosswalk on green walk signal; robot yields.",
+  },
+  {
+    clipId: "clip_01H8U3",
+    timestamp: "00:38",
+    score: 0.92,
+    snippet: "Three kids dart across mid-block, no crosswalk — emergency brake engaged.",
+  },
+  {
+    clipId: "clip_01H8T1",
+    timestamp: "02:11",
+    score: 0.9,
+    snippet: "Helmeted child cyclist crosses lane from right; predicted trajectory intersects path.",
+  },
   {
     clipId: "clip_01H8Z9",
     timestamp: "00:47",
