@@ -408,7 +408,7 @@ function TopBar({ view }: { view: View }) {
         <ChevronRight className="h-3 w-3" />
         <span>workspace</span>
         <ChevronRight className="h-3 w-3" />
-        <span className="text-primary">{view === "observability" ? "observability" : "library"}</span>
+        <span className="text-primary">{view === "pipeline" ? "pipeline" : "library"}</span>
       </div>
       <div className="flex items-center gap-2">
         <StatusPill icon={Radio} label="ingest" value="live" />
@@ -442,19 +442,20 @@ function StatusPill({
 }
 
 function Header({ view }: { view: View }) {
-  if (view === "observability") {
+  if (view === "pipeline") {
     return (
       <div className="space-y-3">
         <div className="flex items-center gap-2 font-mono text-[11px] text-primary">
           <CircleDot className="h-3 w-3" />
-          <span className="uppercase tracking-[0.2em]">observability · live</span>
+          <span className="uppercase tracking-[0.2em]">pipeline · live</span>
         </div>
         <h1 className="text-4xl md:text-5xl font-semibold tracking-tight leading-[1.05]">
-          Every stream, <span className="text-primary text-glow">one glance</span>.
+          Every source, <span className="text-primary text-glow">one index</span>.
         </h1>
         <p className="text-muted-foreground max-w-2xl text-[15px] leading-relaxed">
-          Health, ingest rate and index lag across every source feeding the video DB —
-          robots, dashcams, drones, phones. Jump straight to the frame with natural-language search.
+          Ingest, compress and embed every hour of video landing in segclip.db — dashcams, drones,
+          phones, robots, bulk uploads. Watch throughput, storage saved and index lag, then jump
+          to any moment with plain English.
         </p>
       </div>
     );
